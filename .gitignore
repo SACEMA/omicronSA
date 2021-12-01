@@ -1,0 +1,11 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+# ignore all analysis inputs / products
+analysis
+analysis/*
+
+# never include local.makefile configurations
+local.makefile
