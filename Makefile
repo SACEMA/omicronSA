@@ -18,6 +18,6 @@ VPATH = ${INDIR}:${OUTDIR}
 include support.makefile
 
 # define focal periods for estimation, by province
-${INDIR}/timehighlights.rds: timehighlights.R | ${INDIR}
+${INDIR}/timing.rds: timing.R | ${INDIR}
 	$(call R)
 
