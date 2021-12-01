@@ -4,10 +4,10 @@ R = $(strip Rscript $^ $(1) $@)
 # use as $(call WGET,${SOMEURL})
 WGET = wget -c -O $@ $(1)
 
-${ROOTDIR}: | ${LNDIR}
+${LNDIR}: | ${REFDIR}
 	ln -s $| $@
 
-${MKDIRS}: | ${ROOTDIR}
+${MKDIRS}: | ${LNDIR}
 	mkdir $@
 
 dirs: ${MKDIRS}

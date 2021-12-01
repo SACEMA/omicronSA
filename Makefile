@@ -21,3 +21,12 @@ include support.makefile
 ${INDIR}/timing.rds: timing.R | ${INDIR}
 	$(call R)
 
+# TODO define target to fetch reinfections series from preprint data sharing
+${INDIR}/incidence.rds: incidence.R ${INDIR}/prov_ts_90_pub.RDS
+	$(call R)
+
+# JD TODO: fill in rule
+# ${INDIR}/frequencies.rds: frequency.R ${INDIR}/SGTF.csv
+#	$(call R)
+
+inputs: $(patsubst %,${INDIR}/%.rds,timing incidence frequencies)
