@@ -11,71 +11,38 @@
 
 # reference definitions; optionally create a local.makefile to overide
 # REFDIR & FIGFMT; can also specify in invocation, e.g. `make sometarget FIGFMT=jpg`
+-include makefiles/local.makefile
 
--include local.makefile
+include makefiles/paths.makefile
 
-REFDIR ?= PLACEHOLDER
-FIGFMT ?= png
-LNDIR := analysis
-INDIR  := ${LNDIR}/input
-OUTDIR := ${LNDIR}/output
-FIGDIR := ${OUTDIR}/fig
-DATADIR := refdata
-MKDIRS := ${OUTDIR} ${INDIR}
-COVIDM := ../covidm
-
-VPATH = ${INDIR}:${OUTDIR}
+default: all
+all: support inputs rt mobillity analyses
 
 # automates some setup tasks & provides convenience definitions
 # particular, provides definition of R such that:
 # $(call R) = Rscript [dependencies] [target]
 # $(call R,${THING}) = Rscript [dependencies] ${THING} [target]
-include support.makefile
+include makefiles/support.makefile
+support: dirs
 
-# define focal periods for estimation, by province
-${INDIR}/timing.rds: timing.R | ${INDIR}
-	$(call R)
-
-# TODO define target to fetch reinfections series from preprint data sharing
-${INDIR}/incidence.rds: incidence.R ${INDIR}/prov_ts_90_pub.RDS
-	$(call R)
-
-# ML/JD TODO: fill in rule
-# ${INDIR}/frequencies.rds: frequency.R ${INDIR}/SGTF.csv
-#	$(call R)
-
-INS := $(patsubst %,${INDIR}/%.rds,timing incidence frequencies)
-
+# details for formatting input data
+include makefiles/inputs.makefile
 inputs: ${INS} ${INDIR}/susceptibility.rds
 
-# TBD TODO:
-# ${FIGDIR}/frequency_vis.png: something.R ${INDIR}/frequencies.rds
-#	$(call R)
-# 
-# ${FIGDIR}/var_incidence.png: something2.R ${INS}
-#	$(call R)
-
-${OUTPUT}/omicron_ratios: est_rt_ratios.R ${INS}
-	$(call R)
-
-${OUTPUT}/omicron_ratios.rds: consolidate.R ${OUTPUT}/omicron_ratios
-	$(call R)
-
-${FIGDIR}/omicron_ratios.png: fig/rt_ratios.R ${OUTPUT}/omicron_ratios.rds
-	$(call R)
+# details for estimating Rt, ratios figures etc
+include makefiles/rt.makefile
+rt: ${OUTPUT}/omicron_ratios ${OUTPUT}/omicron_ratios.rds ${FIGDIR}/omicron_ratios.png
 
 # details for getting contact matrix adjustments
-include mobility.makefile
+include makefiles/mobility.makefile
+mobility: ${MOB}
 
-${INDIR}/susceptibility.rds: susceptibility.R ${DATADIR}/escapable.rds ${DATADIR}/non_reinfectable.rds
-	$(call R)
+# details for analyses using the estimates derived in previous steps
+include makefiles/analyses.makefile
+analyses: ${INDIR}/susceptibility.rds ${OUTDIR}/ngm_ratios.rds ${OUTDIR}/thresholds.rds ${FIGDIR}/thresholds.png
 
-${OUTDIR}/ngm_ratios.rds: ngm_ratio.R ${REFDIR}/contact_matrices.rds ${REFDIR}/covidm_fit_yu.qs \
-${INDIR}/susceptibility.rds ${INDIR}/timing.rds ${MOB} | ${COVIDM}
-	$(call R,${COVIDM})
-
-${OUTDIR}/thresholds.rds: thresholds.R ${INDIR}/timing.rds ${OUTPUT}/omicron_ratios.rds ${OUTDIR}/ngm_ratios.rds
-	$(call R)
-
-${FIGDIR}/thresholds.png: fig/thresholds.R ${OUTDIR}/thresholds.rds
-	$(call R)
+# get a list of all available targets
+.PHONY: list
+list:
+	grep "^[^#[:space:]].*:" Makefile
+	
