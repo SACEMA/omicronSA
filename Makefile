@@ -54,4 +54,7 @@ ${FIGDIR}/omicron_ratios.png: fig/rt_ratios.R ${OUTPUT}/omicron_ratios.rds
 # details for getting contact matrix adjustments
 include mobility.makefile
 
-${OUTDIR}/ngm_ratios.rds: ngm_ratio.R ${MOB} ${DATADIR}
+${INDIR}/susceptibility.rds: susceptibility.R ${REFDIR}/escapable.rds ${REFDIR}/non_reinfectable.rds
+	$(call R)
+
+${OUTDIR}/ngm_ratios.rds: ngm_ratio.R ${MOB} ${INDIR}/susceptibility.rds 
