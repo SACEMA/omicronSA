@@ -10,7 +10,9 @@ LNDIR := analysis
 INDIR  := ${LNDIR}/input
 OUTDIR := ${LNDIR}/output
 FIGDIR := ${OUTDIR}/fig
+DATADIR := refdata
 MKDIRS := ${OUTDIR} ${INDIR}
+COVIDM := ../covidm
 
 VPATH = ${INDIR}:${OUTDIR}
 
@@ -52,3 +54,4 @@ ${FIGDIR}/omicron_ratios.png: fig/rt_ratios.R ${OUTPUT}/omicron_ratios.rds
 # details for getting contact matrix adjustments
 include mobility.makefile
 
+${OUTDIR}/ngm_ratios.rds: ngm_ratio.R ${MOB} ${DATADIR}
