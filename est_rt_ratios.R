@@ -65,38 +65,47 @@ smps <- 1e3
 time.dt <- readRDS(.args[1])
 freq <- as.data.table(readRDS(.args[2]))[sample < 5]
 inc.dt <- readRDS(.args[3])[
-  freq, on=.(date, province), allow.cartesian = TRUE, nomatch = 0
-][, var := rbinom(.N, tot, est_prop) ]
+  freq, on = .(date, province), allow.cartesian = TRUE, nomatch = 0][,
+  var := rbinom(.N, tot, est_prop) 
+]
 
 time.dt[wave == "omicron" & !is.na(start),
     # inc.dt[, .(edate = max(date)), by=province], on=.(province),
-    end := start+6
+    end := start + 6
 ]
 
-src.dt <- inc.dt[time.dt, on=.(province), nomatch = 0, .(
-  region = sprintf("%s_%i", abbr, sample), date, var, ref = tot-var, breakpoint = between(date, start, end))
+src.dt <- inc.dt[
+  time.dt,
+  on = .(province),
+  nomatch = 0,
+  .(
+    region = sprintf("%s_%i", abbr, sample), date, var, ref = tot - var,
+    breakpoint = between(date, start, end)
+  )
 ]
 
-#' @examples 
-# p <- ggplot(src.dt[region == "GAUTENG"]) + aes(date) + 
-#     geom_line(aes(y=tot, color = "total")) +
-#     geom_line(aes(y=tot-inf1, color="reinf")) + 
-#     theme_minimal(base_size = 16) +
-#     scale_x_date(NULL, date_breaks = "week", date_labels = "%b %d") + scale_y_continuous("Incidence", trans = "log2") + 
-#     theme(legend.position = c(0, 1), legend.justification = c(0, 1)) +
-#     scale_color_discrete(NULL)
-# 
-# ggsave("spim-gauteng.png", p, width = 14, height = 7, dpi = 600)
-# 
-# p2 <- ggplot(src.dt[region == "GAUTENG"]) + aes(date) + 
-#     geom_line(aes(y=tot, color = "total")) +
-#     geom_line(aes(y=vartot, color="variant")) + 
-#     theme_minimal(base_size = 16) +
-#     scale_x_date(NULL, date_breaks = "week", date_labels = "%b %d") + scale_y_continuous("Incidence", trans = "log2") + 
-#     theme(legend.position = c(0, 1), legend.justification = c(0, 1)) +
-#     scale_color_discrete(NULL)
-# 
-# ggsave("spim-gauteng-var.png", p2, width = 14, height = 7, dpi = 600)
+#' @examples
+#' p <- ggplot(src.dt[region == "GAUTENG"]) + aes(date) +
+#'     geom_line(aes(y=tot, color = "total")) +
+#'     geom_line(aes(y=tot-inf1, color="reinf")) +
+#'     theme_minimal(base_size = 16) +
+#'     scale_x_date(NULL, date_breaks = "week", date_labels = "%b %d") +
+#'     scale_y_continuous("Incidence", trans = "log2") + 
+#'     theme(legend.position = c(0, 1), legend.justification = c(0, 1)) +
+#'     scale_color_discrete(NULL)
+#'
+#' ggsave("spim-gauteng.png", p, width = 14, height = 7, dpi = 600)
+#'
+#' p2 <- ggplot(src.dt[region == "GAUTENG"]) + aes(date) +
+#'     geom_line(aes(y=tot, color = "total")) +
+#'     geom_line(aes(y=vartot, color="variant")) +
+#'     theme_minimal(base_size = 16) +
+#'     scale_x_date(NULL, date_breaks = "week", date_labels = "%b %d") +
+#'     scale_y_continuous("Incidence", trans = "log2") +
+#'     theme(legend.position = c(0, 1), legend.justification = c(0, 1)) +
+#'     scale_color_discrete(NULL)
+#'
+#' ggsave("spim-gauteng-var.png", p2, width = 14, height = 7, dpi = 600)
 
 Rtcalc <- function(
     case.dt,
@@ -122,7 +131,7 @@ Rtcalc <- function(
     ...
 )
 
-# (region == "GAUTENG" & wave %in% c("delta","omicron"))
+#' (region == "GAUTENG" & wave %in% c("delta","omicron"))
 
 #' TODO split these into separate make steps?
 Rtcalc(
@@ -140,4 +149,3 @@ Rtcalc(
     gi = shortgi, ip = shortinc,
     target_folder = file.path(tail(.args, 1), "omicronlow")
 )
-
