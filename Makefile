@@ -46,6 +46,9 @@ ${OUTPUT}/omicron_ratios: est_rt_ratios.R ${INS}
 ${OUTPUT}/omicron_ratios.rds: consolidate.R ${OUTPUT}/omicron_ratios
 	$(call R)
 
-# TBD TODO:
-# ${FIGDIR}/omicron_rations.png: something.R ${OUTPUT}/omicron_ratios.rds
-#	$(call R)
+${FIGDIR}/omicron_ratios.png: fig/rt_ratios.R ${OUTPUT}/omicron_ratios.rds
+	$(call R)
+
+# details for getting contact matrix adjustments
+include mobility.makefile
+
