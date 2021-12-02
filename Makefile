@@ -21,8 +21,8 @@ INDIR  := ${LNDIR}/input
 OUTDIR := ${LNDIR}/output
 FIGDIR := ${OUTDIR}/fig
 DATADIR := refdata
-MKDIRS := ${OUTDIR} ${INDIR}
-COVIDM := ../covidm
+MKDIRS := ${OUTDIR} ${INDIR} ${FIGDIR}
+COVIDM ?= ../covidm
 
 VPATH = ${INDIR}:${OUTDIR}
 
@@ -55,13 +55,13 @@ inputs: ${INS} ${INDIR}/susceptibility.rds
 # ${FIGDIR}/var_incidence.png: something2.R ${INS}
 #	$(call R)
 
-${OUTPUT}/omicron_ratios: est_rt_ratios.R ${INS}
+${OUTDIR}/omicron_ratios: est_rt_ratios.R ${INS}
 	$(call R)
 
-${OUTPUT}/omicron_ratios.rds: consolidate.R ${OUTPUT}/omicron_ratios
-	$(call R)
+${OUTDIR}/omicron_ratios.rds: consolidate.R | ${OUTDIR}/omicron_ratios
+	$(call R,$|)
 
-${FIGDIR}/omicron_ratios.png: fig/rt_ratios.R ${OUTPUT}/omicron_ratios.rds
+${FIGDIR}/omicron_ratios.png: fig/rt_ratios.R ${OUTDIR}/omicron_ratios.rds
 	$(call R)
 
 # details for getting contact matrix adjustments
@@ -70,12 +70,14 @@ include mobility.makefile
 ${INDIR}/susceptibility.rds: susceptibility.R ${DATADIR}/escapable.rds ${DATADIR}/non_reinfectable.rds
 	$(call R)
 
-${OUTDIR}/ngm_ratios.rds: ngm_ratio.R ${REFDIR}/contact_matrices.rds ${REFDIR}/covidm_fit_yu.qs \
-${INDIR}/susceptibility.rds ${INDIR}/timing.rds ${MOB} | ${COVIDM}
+${OUTDIR}/ngm_ratios.rds: ngm_ratio.R ${DATADIR}/contact_matrices.rds ${DATADIR}/covidm_fit_yu.qs \
+${INDIR}/susceptibility.rds ${INDIR}/timing.rds ${MOB} | ${COVIDM} ${OUTDIR}
 	$(call R,${COVIDM})
 
-${OUTDIR}/thresholds.rds: thresholds.R ${INDIR}/timing.rds ${OUTPUT}/omicron_ratios.rds ${OUTDIR}/ngm_ratios.rds
+${OUTDIR}/thresholds.rds: thresholds.R ${INDIR}/timing.rds ${OUTDIR}/omicron_ratios.rds ${OUTDIR}/ngm_ratios.rds | ${OUTDIR}
 	$(call R)
 
-${FIGDIR}/thresholds.png: fig/thresholds.R ${OUTDIR}/thresholds.rds
+${FIGDIR}/thresholds.png: fig/thresholds.R ${OUTDIR}/thresholds.rds | ${FIGDIR}
 	$(call R)
+
+figures: ${FIGDIR}/thresholds.png
