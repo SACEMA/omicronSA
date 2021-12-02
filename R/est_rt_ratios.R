@@ -116,6 +116,7 @@ Rtcalc <- function(
     gp = gp_opts(),
     rt = rt_opts(),
     gi = generation_time, ip = incubation_period, verbose = FALSE,
+    log = "rt",
     ...
 ) regional_epinow(
     reported_cases = case.dt,
@@ -132,6 +133,7 @@ Rtcalc <- function(
     verbose = verbose,
     horizon = 0,
     output = "samples",
+    logs = file.path("logs", log),
     ...
 )
 
@@ -140,16 +142,19 @@ Rtcalc <- function(
 #' TODO split these into separate make steps?
 Rtcalc(
     src.dt[, .(region, date, confirm = ref)],
-    target_folder = file.path(tail(.args, 1), "delta")
+    target_folder = file.path(tail(.args, 1), "delta"),
+    log = "delta"
 )
 
 Rtcalc(
     src.dt[, .(region, date, confirm = var)],
-    target_folder = file.path(tail(.args, 1), "omicron")
+    target_folder = file.path(tail(.args, 1), "omicron"),
+    log = "omicron"
 )
 
 Rtcalc(
     src.dt[, .(region, date, confirm = var)],
     gi = shortgi, ip = shortinc,
-    target_folder = file.path(tail(.args, 1), "omicronlow")
+    target_folder = file.path(tail(.args, 1), "omicronlow"),
+    log = "omicronlow"
 )
