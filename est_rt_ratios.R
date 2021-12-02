@@ -122,23 +122,9 @@ Rtcalc <- function(
     ...
 )
 
-extractRt <- function(reg_res, slc) {
-    return(rbindlist(mapply(
-        function(reg, lbl) reg$estimates$samples[variable == "R", .(region = lbl, sample, date, value)],
-        reg = reg_res$regional,
-        lbl = names(reg_res$regional),
-        SIMPLIFY = FALSE
-    ))[
-        slc, on=.(region, date), breakpoint := breakpoint
-    ][, .(region, sample, date, breakpoint, value) ])
-    # [,
-    #     .(value = exp(mean(log(value)))),
-    #     by=.(region, sample)
-    # ])
-}
-
 # (region == "GAUTENG" & wave %in% c("delta","omicron"))
 
+#' TODO split these into separate make steps?
 Rtcalc(
     src.dt[, .(region, date, confirm = ref)],
     target_folder = file.path(tail(.args, 1), "delta")
@@ -155,40 +141,3 @@ Rtcalc(
     target_folder = file.path(tail(.args, 1), "omicronlow")
 )
 
-# extractRt(
-#     , src.dt)[, calc := "omicron" ]
-# 
-# extractRt(, src.dt)[, calc := "delta" ]
-# 
-# rbind(
-#     ,
-#     extractRt(Rtcalc(
-#       src.dt[, .(region, date, confirm = var)],
-#     ), src.dt)[, calc := "omicron" ],
-#     extractRt(Rtcalc(
-#       src.dt[, .(region, date, confirm = var)],
-#       gi = shortgi, ip = shortinc
-#     ), src.dt)[, calc := "omicronlo" ]
-# )
-
-# res.dt[, wave := factor(wave, levels = c("initial", "beta", "delta", "omicron"))]
-
-# ggplot(res.dt[wave == "omicron"][sample <= 1000]) + aes(
-#     date, value, group=interaction(sample, breakpoint), color = breakpoint
-# ) + facet_grid(calc ~ wave) + geom_line(alpha = 0.05) + geom_hline(
-#     aes(yintercept = value),
-#         data = function(dt) dt[breakpoint == FALSE][,
-#             .(value = exp(mean(log(value)))),
-#             by=.(region, sample, wave, calc)
-#     ], color = "firebrick", alpha = 0.05)
-# 
-# res.dt[wave == "omicron", date[which.max(!breakpoint)]]
-# 
-# ggplot(res.dt[,{
-#     qs <- quantile(value, probs = c(0.025, 0.25, 0.5, 0.75, 0.975))
-#     names(qs) <- c("lo95","lo50","md","hi50","hi95")
-#     as.list(qs)
-# }, by=.(region, wave, calc)]) + aes(y = region, linetype=calc, color = wave) + 
-#     geom_errorbarh(aes(x=md, xmin=lo50, xmax=hi50), position = "dodge") + geom_vline(xintercept = 1, color = "firebrick")
-
-# saveRDS(res.dt, tail(.args, 1))
