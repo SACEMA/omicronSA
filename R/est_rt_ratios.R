@@ -72,12 +72,12 @@ inc.dt <- readRDS(.args[2])[
   freq, on = .(date, province), allow.cartesian = TRUE, nomatch = 0][,
   var := rbinom(.N, tot, est_prop)
 ]
-print(inc.dt)
+
 time.dt[wave == "omicron" & !is.na(start),
     # inc.dt[, .(edate = max(date)), by=province], on=.(province),
     end := start + 6
 ]
-print(time.dt)
+
 src.dt <- inc.dt[
   time.dt,
   on = .(province),
@@ -87,7 +87,7 @@ src.dt <- inc.dt[
     breakpoint = between(date, start, end)
   )
 ]
-print(src.dt)
+
 #' @examples
 #' p <- ggplot(src.dt[region == "GAUTENG"]) + aes(date) +
 #'     geom_line(aes(y=tot, color = "total")) +
