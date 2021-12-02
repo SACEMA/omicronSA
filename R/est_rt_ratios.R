@@ -7,10 +7,9 @@ suppressPackageStartupMessages({
 .args <- if (interactive()) file.path(
     "analysis",
     c("input", "input", "input", "output"),
-    c("timing.rds", "frequencies.rds", "incidence.rds", "omicron_ratios")
+    c("timing.rds", "incidence.rds", "frequencies.rds", "omicron_ratios")
 ) else commandArgs(trailingOnly = TRUE)
 
-print(.args)
 #' from covidm parameterization
 mean_generation_interval <- 6.375559
 
@@ -25,7 +24,7 @@ gen_time <- function(meangi) {
   tarmcv <- generation_time$mean_sd / generation_time$mean
   tarscv <- generation_time$sd_sd / generation_time$sd
   tarcv <- generation_time$sd / generation_time$mean
-  
+
   generation_time$mean <- meangi
   generation_time$mean_sd <- generation_time$mean * tarmcv
   generation_time$sd <- generation_time$mean * tarcv
@@ -34,7 +33,6 @@ gen_time <- function(meangi) {
 }
 
 generation_time <- gen_time(mean_generation_interval)
-#' generation_time <- readRDS("analysis/input/gen_time.RDS")
 
 #' also bootstrapped from covidm assumptions
 incubation_period <- list(
@@ -66,17 +64,20 @@ crs <- 4
 smps <- 1e3
 
 time.dt <- readRDS(.args[1])
-freq <- as.data.table(readRDS(.args[2]))[sample < 5]
-inc.dt <- readRDS(.args[3])[
+
+freq <- as.data.table(readRDS(.args[3]))
+freq <- freq[sample < 5]
+
+inc.dt <- readRDS(.args[2])[
   freq, on = .(date, province), allow.cartesian = TRUE, nomatch = 0][,
   var := rbinom(.N, tot, est_prop)
 ]
-
+print(inc.dt)
 time.dt[wave == "omicron" & !is.na(start),
     # inc.dt[, .(edate = max(date)), by=province], on=.(province),
     end := start + 6
 ]
-
+print(time.dt)
 src.dt <- inc.dt[
   time.dt,
   on = .(province),
@@ -86,7 +87,7 @@ src.dt <- inc.dt[
     breakpoint = between(date, start, end)
   )
 ]
-
+print(src.dt)
 #' @examples
 #' p <- ggplot(src.dt[region == "GAUTENG"]) + aes(date) +
 #'     geom_line(aes(y=tot, color = "total")) +
@@ -123,7 +124,7 @@ Rtcalc <- function(
     rt = rt,
     stan = stan_opts(
         samples = smps,
-        warmup = 200, 
+        warmup = 200,
         cores = crs,
         control = list(adapt_delta = 0.99, max_treedepth = 20)
     ),
