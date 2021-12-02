@@ -7,10 +7,9 @@
 # ignore all analysis inputs / products
 analysis
 analysis/*
-!analysis/.gitignore
+!analysis/README.md
 
 # never include local.makefile configurations
-local.makefile
 makesfiles/local.makefile
 
 # don't include log files
