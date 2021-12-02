@@ -11,3 +11,4 @@ analysis/*
 
 # never include local.makefile configurations
 local.makefile
+makesfiles/local.makefile

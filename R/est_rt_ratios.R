@@ -17,13 +17,13 @@ gen_time <- function(meangi) {
   generation_time <- as.list(
     EpiNow2::generation_times[
       disease == "SARS-CoV-2", .(
-        mean, mean_sd, sd, sd_sd, max=30
+        mean, mean_sd, sd, sd_sd, max = 30
       )]
   )
-  
-  tarmcv <- generation_time$mean_sd/generation_time$mean
-  tarscv <- generation_time$sd_sd/generation_time$sd
-  tarcv <- generation_time$sd/generation_time$mean
+
+  tarmcv <- generation_time$mean_sd / generation_time$mean
+  tarscv <- generation_time$sd_sd / generation_time$sd
+  tarcv <- generation_time$sd / generation_time$mean
   
   generation_time$mean <- meangi
   generation_time$mean_sd <- generation_time$mean * tarmcv
@@ -33,7 +33,7 @@ gen_time <- function(meangi) {
 }
 
 generation_time <- gen_time(mean_generation_interval)
-# generation_time <- readRDS("analysis/input/gen_time.RDS")
+#' generation_time <- readRDS("analysis/input/gen_time.RDS")
 
 #' also bootstrapped from covidm assumptions
 incubation_period <- list(
@@ -53,9 +53,11 @@ shorteng <- function(shrink) list(
 )
 
 shortinc <- shorteng(0.5)
-shortgi <- gen_time(mean_generation_interval - 
-  exp(incubation_period$mean + incubation_period$sd^2/2) +
-  exp(shortinc$mean + shortinc$sd^2/2))
+shortgi <- gen_time(
+  mean_generation_interval -
+  exp(incubation_period$mean + incubation_period$sd^2 / 2) +
+  exp(shortinc$mean + shortinc$sd^2 / 2)
+)
 
 est.ext <- 30
 
@@ -66,7 +68,7 @@ time.dt <- readRDS(.args[1])
 freq <- as.data.table(readRDS(.args[2]))[sample < 5]
 inc.dt <- readRDS(.args[3])[
   freq, on = .(date, province), allow.cartesian = TRUE, nomatch = 0][,
-  var := rbinom(.N, tot, est_prop) 
+  var := rbinom(.N, tot, est_prop)
 ]
 
 time.dt[wave == "omicron" & !is.na(start),
