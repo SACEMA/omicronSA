@@ -12,3 +12,6 @@ analysis/*
 # never include local.makefile configurations
 local.makefile
 makesfiles/local.makefile
+
+# don't include log files
+logs
