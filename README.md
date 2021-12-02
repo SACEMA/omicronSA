@@ -13,11 +13,35 @@ This analysis estimates the mixture of transmissibility and immune escape for SA
 
 # Repository structure
 
+## Make
+
+This repository uses a `Makefile` to define the analysis workflow. This `Makefile` is split into component `.makefile`'s stored in the `makefiles` folder. To reproduce the analysis (once the dependencies have been installed, and key data sources have been added as outlined below) we can simply run the following in the command line:
+
+```bash
+make
+```
+
+To see a breakdown of workflow steps run the following instead:
+
+```bash
+make list
+```
+
+Individual steps can then be updated by running:
+
+```bash
+make <target>
+```
+
+Individual analysis steps can also be run interactively (see the `R` folder). See the [`makefiles` README](makefiles/) for further details of the component workflow steps.
+
 ## Key folders
 
 Folder| Purpose
 ---|---
 [`.devcontainer`](.devcontainer/) | Resources for reproducibility using `vscode` and `docker`.
+
+
 ## Key files
 
 File | Purpose
