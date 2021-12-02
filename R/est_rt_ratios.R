@@ -94,7 +94,7 @@ src.dt <- inc.dt[
 #'     geom_line(aes(y=tot-inf1, color="reinf")) +
 #'     theme_minimal(base_size = 16) +
 #'     scale_x_date(NULL, date_breaks = "week", date_labels = "%b %d") +
-#'     scale_y_continuous("Incidence", trans = "log2") + 
+#'     scale_y_continuous("Incidence", trans = "log2") +
 #'     theme(legend.position = c(0, 1), legend.justification = c(0, 1)) +
 #'     scale_color_discrete(NULL)
 #'
