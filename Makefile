@@ -31,7 +31,7 @@ inputs: ${INS} ${INDIR}/susceptibility.rds
 
 # details for estimating Rt, ratios figures etc
 include makefiles/rt.makefile
-rt: ${OUTPUT}/omicron_ratios ${OUTPUT}/omicron_ratios.rds ${FIGDIR}/omicron_ratios.png
+rt: ${OUTDIR}/omicron_ratios ${OUTDIR}/omicron_ratios.rds ${FIGDIR}/omicron_ratios.png
 
 # details for getting contact matrix adjustments
 include makefiles/mobility.makefile

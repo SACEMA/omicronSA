@@ -4,7 +4,7 @@ ${INDIR}/timing.rds: R/timing.R | ${INDIR}
 	$(call R)
 
 # TODO define target to fetch reinfections series from preprint data sharing
-${INDIR}/incidence.rds: R/incidence.R ${INDIR}/prov_ts_90_pub.RDS
+${INDIR}/incidence.rds: R/incidence.R ${INDIR}/prov_ts_90_pub.rds
 	$(call R)
 
 # ML/JD TODO: fill in rule
