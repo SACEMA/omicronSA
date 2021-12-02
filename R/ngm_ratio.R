@@ -35,12 +35,12 @@ mob.dt <- readRDS(.args[5])
 
 contact_schedule <- mob.dt[
   timing, on = .(region = province)][
-  between(date,start,start + 6)][,
+  between(date, start, start + 6)][,
   .(
-    home = 1, work = prod(work)^(1 / .N),
-    other = prod(other)^(1 / .N),
+    home = 1, work = prod(work)^ (1 / .N),
+    other = prod(other)^ (1 / .N),
     # school is often 0, so weight slightly differently 
-    school = prod(school)^(1 / .N) 
+    school = prod(school) ^ (1 / .N)
   ), by = .(region = abbr)
 ]
 

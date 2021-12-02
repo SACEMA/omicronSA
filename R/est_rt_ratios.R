@@ -10,6 +10,7 @@ suppressPackageStartupMessages({
     c("timing.rds", "frequencies.rds", "incidence.rds", "omicron_ratios")
 ) else commandArgs(trailingOnly = TRUE)
 
+print(.args)
 #' from covidm parameterization
 mean_generation_interval <- 6.375559
 

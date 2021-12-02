@@ -6,7 +6,7 @@ ${OUTDIR}/ngm_ratios.rds: R/ngm_ratio.R ${REFDIR}/contact_matrices.rds ${REFDIR}
 ${INDIR}/susceptibility.rds ${INDIR}/timing.rds ${MOB} | ${COVIDM}
 	$(call R,${COVIDM})
 
-${OUTDIR}/thresholds.rds: R/thresholds.R ${INDIR}/timing.rds ${OUTPUT}/omicron_ratios.rds ${OUTDIR}/ngm_ratios.rds
+${OUTDIR}/thresholds.rds: R/thresholds.R ${INDIR}/timing.rds ${OUTDIR}/omicron_ratios.rds ${OUTDIR}/ngm_ratios.rds
 	$(call R)
 
 ${FIGDIR}/thresholds.png: R/thresholds.R ${OUTDIR}/thresholds.rds
