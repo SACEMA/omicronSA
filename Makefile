@@ -25,8 +25,27 @@ ${INDIR}/timing.rds: timing.R | ${INDIR}
 ${INDIR}/incidence.rds: incidence.R ${INDIR}/prov_ts_90_pub.RDS
 	$(call R)
 
-# JD TODO: fill in rule
+# ML/JD TODO: fill in rule
 # ${INDIR}/frequencies.rds: frequency.R ${INDIR}/SGTF.csv
 #	$(call R)
 
-inputs: $(patsubst %,${INDIR}/%.rds,timing incidence frequencies)
+INS := $(patsubst %,${INDIR}/%.rds,timing incidence frequencies)
+
+inputs: ${INS}
+
+# TBD TODO:
+# ${FIGDIR}/frequency_vis.png: something.R ${INDIR}/frequencies.rds
+#	$(call R)
+# 
+# ${FIGDIR}/var_incidence.png: something2.R ${INS}
+#	$(call R)
+
+${OUTPUT}/omicron_ratios: est_rt_ratios.R ${INS}
+	$(call R)
+
+${OUTPUT}/omicron_ratios.rds: consolidate.R ${OUTPUT}/omicron_ratios
+	$(call R)
+
+# TBD TODO:
+# ${FIGDIR}/omicron_rations.png: something.R ${OUTPUT}/omicron_ratios.rds
+#	$(call R)
