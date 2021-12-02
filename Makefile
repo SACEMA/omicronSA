@@ -38,10 +38,14 @@ include makefiles/mobility.makefile
 mobility: ${MOB}
 
 # details for analyses using the estimates derived in previous steps
-include makefiles/analyses.makefile
-analyses: ${INDIR}/susceptibility.rds ${OUTDIR}/ngm_ratios.rds ${OUTDIR}/thresholds.rds ${FIGDIR}/thresholds.png
+include makefiles/susceptible.makefile
+susceptible: ${INDIR}/susceptibility.rds ${OUTDIR}/ngm_ratios.rds
 
+# details for calculating the transmissibillity/immune escape thresholds
+include makefiles/thresholds.makefile
+thresholds: ${OUTDIR}/thresholds.rds ${FIGDIR}/thresholds.png
 
+# generate sessioninfo when running make
 .PHONY: sessioninfo
 sessioninfo: 
 	Rscript R/sessioninfo.R

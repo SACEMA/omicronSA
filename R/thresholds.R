@@ -44,15 +44,15 @@ comps <- rbind(
         ngmref.dt[
             between(immune_escape,0.045,0.055),
             .SD,
-            .SDcols= -c("immune_escape")
+            .SDcols = -c("immune_escape")
         ],
-        on= .(epi_sample, sero, province)
+        on = .(epi_sample, sero, province)
     ][,
     ngmratio := multiplier / i.multiplier][,
     delesc := "lo"],
     ngmref.dt[
         ngmref.dt[
-            between(immune_escape,0.045,0.055),
+            between(immune_escape, 0.045, 0.055),
             .SD,
             .SDcols = -c("immune_escape")],
             on = .(epi_sample, sero, province)
