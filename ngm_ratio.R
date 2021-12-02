@@ -16,7 +16,7 @@ suppressPackageStartupMessages({
     c("susceptibility.rds", "timing.rds", "mobility.rds")
   ),
   file.path("..", "SA2UK_alt", "covidm"),
-  file.path("analysis", "output", "ngm_ratio.rds")
+  file.path("analysis", "output", "ngm_ratios.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
 cms <- readRDS(.args[1])
