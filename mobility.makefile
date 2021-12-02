@@ -14,7 +14,7 @@ ${INDIR}/schools.csv:
 ${INDIR}/schflag.csv:
 	$(call WGET,${OXSCHFLAG})
 
-MOB := ${OUTDIR}/mobility.rds
+MOB := ${INDIR}/mobility.rds
 
 ${MOB}: mobility.R $(patsubst %,${INDIR}/%.csv,mobility schools schflag)
 	$(call R)
