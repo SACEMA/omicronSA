@@ -15,11 +15,11 @@ res.dt <- readRDS(.args[1])
 qspans <- c(0.95, 0.5)
 qlims <- sort(c({
     tmp <- 0 + (1 - qspans) / 2
-    names(tmp) <- sprintf("lo%i", qspans*100)
+    names(tmp) <- sprintf("lo%i", qspans * 100)
     tmp
 }, {
     tmp <- 1 - (1 - qspans) / 2
-    names(tmp) <- sprintf("hi%i", qspans*100)
+    names(tmp) <- sprintf("hi%i", qspans * 100)
     tmp
 }, c(md = .5)))
 

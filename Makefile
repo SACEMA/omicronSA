@@ -16,7 +16,7 @@
 include makefiles/paths.makefile
 
 default: all
-all: support inputs rt mobillity analyses
+all: support inputs rt mobillity analyses sessioninfo
 
 # automates some setup tasks & provides convenience definitions
 # particular, provides definition of R such that:
@@ -40,6 +40,11 @@ mobility: ${MOB}
 # details for analyses using the estimates derived in previous steps
 include makefiles/analyses.makefile
 analyses: ${INDIR}/susceptibility.rds ${OUTDIR}/ngm_ratios.rds ${OUTDIR}/thresholds.rds ${FIGDIR}/thresholds.png
+
+
+.PHONY: sessioninfo
+sessioninfo: 
+	Rscript R/sessioninfo.R
 
 # get a list of all available targets
 .PHONY: list
