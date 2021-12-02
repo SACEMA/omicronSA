@@ -1,14 +1,8 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.205.2/containers/r
 {
-	"name": "R (Community)",
-	"build": {
-		"dockerfile": "Dockerfile",
-		// Update VARIANT to pick a specific R version: 4, 4.1, 4.0
-		"args": { "VARIANT": "4.1" },
-		"context": ".."
-	},
-
+	"name": "omicronSA",
+	"image": "ghcr.io/SACEMA/omicronSA:master",
 	// Set *default* container specific settings.json values on container create.
 	"settings": {
 		"r.rterm.linux": "/usr/local/bin/radian",

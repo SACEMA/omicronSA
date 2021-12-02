@@ -11,4 +11,4 @@ suppressPackageStartupMessages({
 
 
 info <- devtools::session_info()
-capture.output(info, file = "sessioninfo.text")
+capture.output(info, file = "sessioninfo.txt")
