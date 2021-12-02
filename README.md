@@ -27,9 +27,9 @@ Folder| Purpose
 
 File | Purpose
 ---|---
-[`Makefile`] | Contains the workflow of this analysis. See the reproducibility section for details. 
-[`DESCRIPTION`](makefiles/) | Contains a summary of the dependencies used in this analysis readable from `R`.
-[`sessioninfo.txt`](refdata/) | Contains a full summary of the environment last used to generate results.
+`Makefile` | Contains the workflow of this analysis. See the reproducibility section for details. 
+`DESCRIPTION` | Contains a summary of the dependencies used in this analysis readable from `R`.
+`sessioninfo.txt` | Contains a full summary of the environment last used to generate results.
 
 # Reproducibillity
 
