@@ -42,7 +42,7 @@ install.packages("devtools")
 devtools::install_dev_deps(dependencies = TRUE)
 ```
 
-Alternatively the dependencies can be installed manually (see the `DESCRIPTION` file for details of the dependencies and their sources). The provided docker image may be used to fully reproduce our analysis environment and this can itself be built using the `Dockerfile`. See the [Docker documentation](https://docs.docker.com) for more detail on using docker. For `vscode` users a `.devcontainer` has been provided which when used with the `Remote development` extension will automate setting up the supplied `Dockerfile`. The environment last used to generate results is also summarised in `sessioninfo.txt`.
+Alternatively the dependencies can be installed manually (see the `DESCRIPTION` file for details of the dependencies and their sources). The provided docker image may be used to fully reproduce our analysis environment and this can itself be built using the provided `Dockerfile`. See the [Docker documentation](https://docs.docker.com) for more detail on using docker. For `vscode` users a `.devcontainer` has been provided which when used with the `Remote development` extension will automate setting up the supplied `Dockerfile`. The environment last used to generate results is also summarised in `sessioninfo.txt`.
 
 ## Data requirements
 
@@ -50,8 +50,8 @@ This analysis requires the following data files which are not included in this r
 
 File | Source
 ---|---
-[`frequencies.rds`] | 
-[`prov_ts_90_pub.rds`] |
+`frequencies.rds` | 
+`prov_ts_90_pub.rds` |
 
 ## Make
 
@@ -73,4 +73,4 @@ Individual steps can then be updated by running:
 make <target>
 ```
 
-Individual analysis steps can also be run interactively (see the `R` folder). See the [`makefiles` README](makefiles/) for further details of the component workflow steps.
+Individual analysis steps can also be run interactively (see the `R` folder). See the [`makefiles` folder](makefiles/) for further details of the component workflow steps.
