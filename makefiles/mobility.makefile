@@ -16,9 +16,7 @@ ${INDIR}/schflag.csv:
 
 MOB := ${INDIR}/mobility.rds
 
-${MOB}: mobility.R $(patsubst %,${INDIR}/%.csv,mobility schools schflag)
+${MOB}: R/mobility.R $(patsubst %,${INDIR}/%.csv,mobility schools schflag)
 	$(call R)
-
-mobility: ${MOB}
 
 # TODO: mobility figure, though not a priority focus

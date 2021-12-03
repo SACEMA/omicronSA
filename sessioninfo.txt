@@ -1,0 +1,97 @@
+─ Session info  ───────────────────────────────────────────────────────
+ hash: microbe, face with monocle, squid
+
+ setting  value
+ version  R version 4.1.2 (2021-11-01)
+ os       Ubuntu 20.04.3 LTS
+ system   x86_64, linux-gnu
+ ui       X11
+ language (EN)
+ collate  en_US.UTF-8
+ ctype    en_US.UTF-8
+ tz       Etc/UTC
+ date     2021-12-02
+ pandoc   NA
+
+─ Packages ────────────────────────────────────────────────────────────
+ package        * version     date (UTC) lib source
+ cachem           1.0.6       2021-08-19 [1] RSPM (R 4.1.0)
+ callr            3.7.0       2021-04-20 [1] RSPM (R 4.1.0)
+ cli              3.1.0       2021-10-27 [1] RSPM (R 4.1.0)
+ codetools        0.2-18      2020-11-04 [2] CRAN (R 4.1.2)
+ colorspace       2.0-2       2021-06-24 [1] RSPM (R 4.1.0)
+ cowplot          1.1.1       2020-12-30 [1] CRAN (R 4.1.2)
+ crayon           1.4.2       2021-10-29 [1] RSPM (R 4.1.0)
+ curl             4.3.2       2021-06-23 [1] RSPM (R 4.1.0)
+ data.table     * 1.14.2      2021-09-27 [1] CRAN (R 4.1.2)
+ desc             1.4.0       2021-09-28 [1] RSPM (R 4.1.0)
+ devtools       * 2.4.3       2021-11-30 [1] RSPM (R 4.1.0)
+ digest           0.6.29      2021-12-01 [1] CRAN (R 4.1.2)
+ ellipsis         0.3.2       2021-04-29 [1] RSPM (R 4.1.0)
+ EpiNow2        * 1.3.3.10    2021-12-02 [1] https://epiforecasts.r-universe.dev (R 4.1.2)
+ fansi            0.5.0       2021-05-25 [1] RSPM (R 4.1.0)
+ fastmap          1.1.0       2021-01-25 [1] RSPM (R 4.1.0)
+ formatR          1.11        2021-06-01 [1] CRAN (R 4.1.2)
+ fs               1.5.1       2021-11-30 [1] RSPM (R 4.1.0)
+ futile.logger    1.4.3       2016-07-10 [1] CRAN (R 4.1.2)
+ futile.options   1.0.1       2018-04-20 [1] CRAN (R 4.1.2)
+ future           1.23.0      2021-10-31 [1] CRAN (R 4.1.2)
+ future.apply     1.8.1       2021-08-10 [1] CRAN (R 4.1.2)
+ generics         0.1.1       2021-10-25 [1] CRAN (R 4.1.2)
+ ggplot2        * 3.3.5       2021-06-25 [1] RSPM (R 4.1.0)
+ globals          0.14.0      2020-11-22 [1] CRAN (R 4.1.2)
+ glue             1.5.1       2021-11-30 [1] RSPM (R 4.1.0)
+ gridExtra        2.3         2017-09-09 [1] CRAN (R 4.1.2)
+ gtable           0.3.0       2019-03-25 [1] RSPM (R 4.1.0)
+ inline           0.3.19      2021-05-31 [1] CRAN (R 4.1.2)
+ jsonlite         1.7.2       2020-12-09 [1] RSPM (R 4.1.0)
+ lambda.r         1.2.4       2019-09-18 [1] CRAN (R 4.1.2)
+ lifecycle        1.0.1       2021-09-24 [1] RSPM (R 4.1.0)
+ listenv          0.8.0       2019-12-05 [1] CRAN (R 4.1.2)
+ loo              2.4.1.9000  2021-12-02 [1] https://epiforecasts.r-universe.dev (R 4.1.2)
+ lubridate        1.8.0       2021-10-07 [1] CRAN (R 4.1.2)
+ magrittr         2.0.1       2020-11-17 [1] RSPM (R 4.1.0)
+ matrixStats      0.61.0      2021-09-17 [1] CRAN (R 4.1.2)
+ memoise          2.0.1       2021-11-26 [1] RSPM (R 4.1.0)
+ munsell          0.5.0       2018-06-12 [1] RSPM (R 4.1.0)
+ parallelly       1.29.0      2021-11-21 [1] CRAN (R 4.1.2)
+ patchwork        1.1.1       2020-12-17 [1] CRAN (R 4.1.2)
+ pillar           1.6.4       2021-10-18 [1] RSPM (R 4.1.0)
+ pkgbuild         1.2.1       2021-11-30 [1] RSPM (R 4.1.0)
+ pkgconfig        2.0.3       2019-09-22 [1] RSPM (R 4.1.0)
+ pkgload          1.2.4       2021-11-30 [1] RSPM (R 4.1.0)
+ prettyunits      1.1.1       2020-01-24 [1] RSPM (R 4.1.0)
+ processx         3.5.2       2021-04-30 [1] RSPM (R 4.1.0)
+ progressr        0.9.0       2021-09-24 [1] CRAN (R 4.1.2)
+ ps               1.6.0       2021-02-28 [1] RSPM (R 4.1.0)
+ purrr            0.3.4       2020-04-17 [1] RSPM (R 4.1.0)
+ qs             * 0.25.1.1    2021-11-05 [1] RSPM (R 4.1.0)
+ R.methodsS3      1.8.1       2020-08-26 [1] RSPM (R 4.1.0)
+ R.oo             1.24.0      2020-08-26 [1] RSPM (R 4.1.0)
+ R.utils          2.11.0      2021-09-26 [1] RSPM (R 4.1.0)
+ R6               2.5.1       2021-08-19 [1] RSPM (R 4.1.0)
+ RApiSerialize    0.1.0       2014-04-19 [1] RSPM (R 4.1.0)
+ Rcpp             1.0.7       2021-07-07 [1] RSPM (R 4.1.0)
+ RcppParallel     5.1.4       2021-05-04 [1] RSPM (R 4.1.0)
+ remotes          2.4.2       2021-11-30 [1] RSPM (R 4.1.0)
+ rlang            0.99.0.9001 2021-12-02 [1] https://epiforecasts.r-universe.dev (R 4.1.2)
+ rprojroot        2.0.2       2020-11-15 [1] RSPM (R 4.1.0)
+ rstan            2.21.2      2020-07-27 [1] CRAN (R 4.1.2)
+ runner           0.4.1       2021-10-03 [1] CRAN (R 4.1.2)
+ scales         * 1.1.1       2020-05-11 [1] RSPM (R 4.1.0)
+ sessioninfo      1.2.1       2021-11-02 [1] RSPM (R 4.1.0)
+ StanHeaders      2.21.0-7    2020-12-17 [1] CRAN (R 4.1.2)
+ stringfish       0.15.5      2021-12-01 [1] CRAN (R 4.1.2)
+ testthat         3.1.0       2021-10-04 [1] RSPM (R 4.1.0)
+ tibble           3.1.6       2021-11-07 [1] RSPM (R 4.1.0)
+ truncnorm        1.0-8       2018-02-27 [1] CRAN (R 4.1.2)
+ usethis        * 2.1.3       2021-10-27 [1] RSPM (R 4.1.0)
+ utf8             1.2.2       2021-07-24 [1] RSPM (R 4.1.0)
+ V8               3.6.0       2021-11-10 [1] CRAN (R 4.1.2)
+ vctrs            0.3.8       2021-04-29 [1] RSPM (R 4.1.0)
+ withr            2.4.3       2021-11-30 [1] RSPM (R 4.1.0)
+
+ [1] /usr/local/lib/R/site-library
+ [2] /usr/local/lib/R/library
+
+───────────────────────────────────────────────────────────────────────

@@ -2,10 +2,15 @@
 .Rhistory
 .RData
 .Ruserdata
+.DS_Store
 
 # ignore all analysis inputs / products
-analysis
 analysis/*
+!analysis/README.md
+*.png
 
 # never include local.makefile configurations
-local.makefile
+makefiles/local.makefile
+
+# don't include log files
+logs
