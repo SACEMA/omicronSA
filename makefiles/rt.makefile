@@ -1,6 +1,14 @@
 
-${OUTDIR}/omicron_ratios: R/est_rt_ratios.R ${INS}
-	$(call R)
+ESTDIR := ${OUTDIR}/omicron_ratios
+
+${ESTDIR}/omicron: 
+	Rscript R/est_rt_ratios.R ${INS} ${ESTDIR} omicron
+
+${ESTDIR}/omicronlow: 
+	Rscript R/est_rt_ratios.R ${INS} ${ESTDIR} omicronlow
+
+${ESTDIR}/delta: 
+	Rscript R/est_rt_ratios.R ${INS} ${ESTDIR} delta
 
 ${OUTDIR}/omicron_ratios.rds: R/consolidate.R ${OUTDIR}/omicron_ratios
 	$(call R)

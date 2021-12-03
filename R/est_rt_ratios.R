@@ -4,11 +4,18 @@ suppressPackageStartupMessages({
     require(EpiNow2)
 })
 
-.args <- if (interactive()) file.path(
-    "analysis",
-    c("input", "input", "input", "output"),
-    c("timing.rds", "incidence.rds", "frequencies.rds", "omicron_ratios")
-) else commandArgs(trailingOnly = TRUE)
+.args <- if (interactive()) {
+  c(
+    file.path(
+     "analysis",
+      c("input", "input", "input", "output"),
+      c("timing.rds", "incidence.rds", "frequencies.rds", "omicron_ratios")
+    ),
+    "omicron"
+  )
+}  else{
+  commandArgs(trailingOnly = TRUE)
+}
 
 #' from covidm parameterization
 mean_generation_interval <- 6.375559
@@ -110,7 +117,7 @@ src.dt <- inc.dt[
 #'     scale_color_discrete(NULL)
 #'
 #' ggsave("spim-gauteng-var.png", p2, width = 14, height = 7, dpi = 600)
-
+#'
 Rtcalc <- function(
     case.dt,
     gp = gp_opts(),
@@ -137,24 +144,15 @@ Rtcalc <- function(
     ...
 )
 
-#' (region == "GAUTENG" & wave %in% c("delta","omicron"))
-
-#' TODO split these into separate make steps?
-Rtcalc(
-    src.dt[, .(region, date, confirm = ref)],
-    target_folder = file.path(tail(.args, 1), "delta"),
-    log = "delta"
+variant_type <- match.arg(.args[5], c("omicron", "omicronlow", "delta"))
+variable <- fcase(
+  variant_type == "omicron", "var",
+  variant_type == "omicronlow", "var",
+  variant_type == "delta", "ref"
 )
 
 Rtcalc(
-    src.dt[, .(region, date, confirm = var)],
-    target_folder = file.path(tail(.args, 1), "omicron"),
-    log = "omicron"
-)
-
-Rtcalc(
-    src.dt[, .(region, date, confirm = var)],
-    gi = shortgi, ip = shortinc,
-    target_folder = file.path(tail(.args, 1), "omicronlow"),
-    log = "omicronlow"
+    src.dt[, .(region, date, confirm = get(variable))],
+    target_folder = file.path(.args[4], 1), variant_type),
+    log = variant_type
 )
