@@ -37,10 +37,6 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 RUN export TAG=$(git ls-remote --tags --refs --sort='version:refname' https://github.com/ManuelHentschel/vscDebugger v\* | tail -n 1 | cut --delimiter='/' --fields=3) \
     && Rscript -e "remotes::install_git('https://github.com/ManuelHentschel/vscDebugger.git', ref = '"${TAG}"', dependencies = FALSE)"
 
-# R Session watcher settings.
-# See more details: https://github.com/REditorSupport/vscode-R/wiki/R-Session-watcher
-RUN echo 'source(file.path(Sys.getenv("HOME"), ".vscode-R", "init.R"))' >> ${R_HOME}/etc/Rprofile.site
-
 RUN apt-get update \
      && export DEBIAN_FRONTEND=noninteractive \
      && apt-get -y install --no-install-recommends libglpk-dev libv8-dev
