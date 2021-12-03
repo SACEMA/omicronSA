@@ -9,7 +9,9 @@ suppressPackageStartupMessages({
     c("omicron_ratios", "omicron_ratios.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
-fls <- list.files(.args[1], "estimate_samples.rds", full.names = TRUE, recursive = TRUE)
+fls <- list.files(
+  .args[1], "estimate_samples.rds", full.names = TRUE, recursive = TRUE
+)
 
 consolidated <- rbindlist(lapply(fls, function(fl) {
   tmp <- tail(strsplit(dirname(fl), "/")[[1]], 3)
@@ -27,6 +29,8 @@ consolidated <- rbindlist(lapply(fls, function(fl) {
 res.dt <- dcast(
   consolidated,
   region + freq_sample + rt_sample + date ~ scenario
-)[, c("ratio", "ratiolow") := .(omicron/delta, omicronlow/delta) ]
+)[,
+  c("ratio", "ratiolow") := .(omicron / delta, omicronlow / delta)
+]
 
 saveRDS(res.dt, tail(.args, 1))
