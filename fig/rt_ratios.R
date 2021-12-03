@@ -25,25 +25,25 @@ qlims <- sort(c( {
 
 q.dt <- rbind(
     res.dt[, {
-        qs <- quantile(omicron, probs = qlims, na.rm = TRUE)
+        qs <- quantile(ratio, probs = qlims, na.rm = TRUE)
         names(qs) <- names(qlims)
         c(as.list(qs), list(scenario = "omicron"))
     }, by=.(region, date)],
     res.dt[, {
-        qs <- quantile(omicronlow, probs = qlims, na.rm = TRUE)
+        qs <- quantile(ratiolow, probs = qlims, na.rm = TRUE)
         names(qs) <- names(qlims)
         c(as.list(qs), list(scenario = "omicronfast"))
     }, by=.(region, date)]
 )
 
-p <- ggplot(q.dt) +
+p <- ggplot(q.dt[region=="GP"]) +
     aes(date, color = scenario, fill = scenario) +
     facet_grid(region ~ .) +
     geom_ribbon(aes(ymin=lo95, ymax=hi95, linetype = "95%"), alpha = 0.1, size = 0.25) +
     geom_ribbon(aes(ymin=lo50, ymax=hi50, linetype = "50%"), alpha = 0.1, size = 0.25) +
     geom_line(aes(y=md, linetype = "median")) +
     coord_cartesian(xlim=as.Date(c("2021-10-10", NA)), ylim=c(1, 4)) +
-    theme_minimal() +
+    theme_minimal(base_size = 20) +
     scale_x_date(NULL) +
     scale_y_continuous(expression(R[eff]^Omicron/R[eff]^Delta)) +
     scale_linetype_manual(NULL, values = c(median="solid", `50%`="dashed", `95%`="dotted")) +
