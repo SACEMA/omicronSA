@@ -44,7 +44,7 @@ ${INDIR}/incidence.rds: incidence.R ${INDIR}/prov_ts_90_pub.RDS
 # ${INDIR}/frequencies.rds: frequency.R ${INDIR}/SGTF.csv
 #	$(call R)
 
-INS := $(patsubst %,${INDIR}/%.rds,timing incidence frequencies)
+INS := $(patsubst %,${INDIR}/%.rds,timing incidence sgtf.sims.rds)
 
 inputs: ${INS} ${INDIR}/susceptibility.rds
 
