@@ -16,7 +16,7 @@
 include makefiles/paths.makefile
 
 default: all
-all: support inputs rt mobillity analyses sessioninfo
+all: support inputs rt mobility susceptible thresholds sessioninfo
 
 # automates some setup tasks & provides convenience definitions
 # particular, provides definition of R such that:
@@ -31,7 +31,7 @@ inputs: ${INS} ${INDIR}/susceptibility.rds
 
 # details for estimating Rt, ratios figures etc
 include makefiles/rt.makefile
-rt: ${OUTDIR}/omicron_ratios ${OUTDIR}/omicron_ratios.rds ${FIGDIR}/omicron_ratios.png
+rt: ${OUTDIR}/omicron_ratios.rds ${FIGDIR}/omicron_ratios.png
 
 # details for getting contact matrix adjustments
 include makefiles/mobility.makefile
