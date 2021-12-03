@@ -4,7 +4,7 @@ suppressPackageStartupMessages({
 })
 
 .args <- if (interactive()) c(
-    file.path("refdata", c("escapable.rds", "non-reinfectable.rds")),
+    file.path("refdata", c("escapable.rds", "no_reinfectable.rds")),
     file.path("analysis", "input", "susceptibility.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
