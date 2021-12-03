@@ -151,8 +151,20 @@ variable <- fcase(
   variant_type == "delta", "ref"
 )
 
+gt <- fcase(
+  variant_type == "omicronlow", shortgi,
+  default = generation_time
+)
+
+inc <- fcase(
+  variant_type == "omicronlow", shortinc,
+  default = incubation_period
+)
+
 Rtcalc(
     src.dt[, .(region, date, confirm = get(variable))],
     target_folder = file.path(.args[4], 1), variant_type),
-    log = variant_type
+    log = variant_type,
+
+    gi = gt, ip = inc
 )
