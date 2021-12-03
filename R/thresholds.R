@@ -42,7 +42,7 @@ comps <- rbind(
     delesc := "ref"],
     ngmref.dt[
         ngmref.dt[
-            between(immune_escape,0.045,0.055),
+            between(immune_escape, 0.045, 0.055),
             .SD,
             .SDcols = -c("immune_escape")
         ],
