@@ -9,11 +9,11 @@ suppressPackageStartupMessages({
     file.path(
      "analysis",
       c("input", "input", "input", "output"),
-      c("timing.rds", "incidence.rds", "frequencies.rds", "omicron_ratios")
+      c("timing.rds", "incidence.rds", "sgtf.sims.rds", "omicron_ratios")
     ),
     "omicron"
   )
-}  else{
+} else {
   commandArgs(trailingOnly = TRUE)
 }
 
@@ -72,8 +72,8 @@ smps <- 1e3
 
 time.dt <- readRDS(.args[1])
 
-freq <- as.data.table(readRDS(.args[3]))
-freq <- freq[sample < 5]
+freq <- as.data.table(readRDS(.args[3]))[sample <= 10]
+setnames(freq, "prov", "province")
 
 inc.dt <- readRDS(.args[2])[
   freq, on = .(date, province), allow.cartesian = TRUE, nomatch = 0][,

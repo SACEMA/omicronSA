@@ -8,7 +8,7 @@ suppressPackageStartupMessages({
 .args <- if (interactive()) file.path(
     "analysis",
     c("input", "output"),
-    c("prov_ts_90_pub.RDS", "ref_incidence.rds")
+    c("prov_ts_90_pub.RDS", "incidence.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
 dt <- readRDS(.args[1])
@@ -22,8 +22,8 @@ setnames(dt,
 dt[, tot := inf1 + inf2 + inf3 + inf4, by=province ]
 
 res.dt <- rbind(
-    dt[, .(date, province, tot, inf1)]#,
- #   dt[, .(province = "ALL", tot = sum(tot), inf1 = sum(inf1)), by=date]
+    dt[, .(date, province, tot, inf1)],
+    dt[, .(province = "ALL", tot = sum(tot), inf1 = sum(inf1)), by=date]
 )
 
 saveRDS(res.dt, tail(.args, 1))
