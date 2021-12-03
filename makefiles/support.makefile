@@ -8,6 +8,6 @@ ${LNDIR}: | ${REFDIR}
 	ln -s $| $@
 
 ${MKDIRS}: | ${LNDIR}
-	mkdir $@
+	mkdir -p $@
 
 dirs: ${MKDIRS}
