@@ -5,8 +5,8 @@ omiratios: ${OUTDIR}/omicron_ratios.rds
 
 RTESTS := $(addprefix ${ESTDIR}/,omicron omicronlow delta)
 
-${OUTDIR}/omicron_ratios.rds: R/consolidate.R ${RTESTS}
-	$(call R)
+${OUTDIR}/omicron_ratios.rds: R/consolidate.R ${RTESTS} | ${ESTDIR}
+	Rscript $< $| $@
 
 ${ESTDIR}:
 	mkdir -p $@
