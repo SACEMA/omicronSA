@@ -4,14 +4,15 @@ suppressPackageStartupMessages({
     require(EpiNow2)
 })
 
+.debug <- c("omicron","delta","omicronlo")[1]
 .args <- if (interactive()) {
   c(
     file.path(
      "analysis",
-      c("input", "input", "input", "output"),
-      c("timing.rds", "incidence.rds", "sgtf.sims.rds", "omicron_ratios")
+      c("input", "output", "output"),
+      c("timing.rds", "incidence_ensemble.rds")
     ),
-    "omicron"
+    file.path("analysis", "output", "omicron_ratios", .debug[1])
   )
 } else {
   commandArgs(trailingOnly = TRUE)
@@ -72,13 +73,7 @@ smps <- 1e3
 
 time.dt <- readRDS(.args[1])
 
-freq <- as.data.table(readRDS(.args[3]))[sample <= 10]
-setnames(freq, "prov", "province")
-
-inc.dt <- readRDS(.args[2])[
-  freq, on = .(date, province), allow.cartesian = TRUE, nomatch = 0][,
-  var := rbinom(.N, tot, est_prop)
-]
+inc.dt <- as.data.table(readRDS(.args[2]))[sample <= 10]
 
 time.dt[wave == "omicron" & !is.na(start),
     # inc.dt[, .(edate = max(date)), by=province], on=.(province),
@@ -95,29 +90,6 @@ src.dt <- inc.dt[
   )
 ]
 
-#' @examples
-#' p <- ggplot(src.dt[region == "GAUTENG"]) + aes(date) +
-#'     geom_line(aes(y=tot, color = "total")) +
-#'     geom_line(aes(y=tot-inf1, color="reinf")) +
-#'     theme_minimal(base_size = 16) +
-#'     scale_x_date(NULL, date_breaks = "week", date_labels = "%b %d") +
-#'     scale_y_continuous("Incidence", trans = "log2") +
-#'     theme(legend.position = c(0, 1), legend.justification = c(0, 1)) +
-#'     scale_color_discrete(NULL)
-#'
-#' ggsave("spim-gauteng.png", p, width = 14, height = 7, dpi = 600)
-#'
-#' p2 <- ggplot(src.dt[region == "GAUTENG"]) + aes(date) +
-#'     geom_line(aes(y=tot, color = "total")) +
-#'     geom_line(aes(y=vartot, color="variant")) +
-#'     theme_minimal(base_size = 16) +
-#'     scale_x_date(NULL, date_breaks = "week", date_labels = "%b %d") +
-#'     scale_y_continuous("Incidence", trans = "log2") +
-#'     theme(legend.position = c(0, 1), legend.justification = c(0, 1)) +
-#'     scale_color_discrete(NULL)
-#'
-#' ggsave("spim-gauteng-var.png", p2, width = 14, height = 7, dpi = 600)
-#'
 Rtcalc <- function(
     case.dt,
     gp = gp_opts(),
@@ -144,27 +116,21 @@ Rtcalc <- function(
     ...
 )
 
-variant_type <- match.arg(.args[5], c("omicron", "omicronlow", "delta"))
+variant_type <- match.arg(basename(tail(.args, 1)), c("omicron", "omicronlow", "delta"))
 variable <- fcase(
   variant_type == "omicron", "var",
   variant_type == "omicronlow", "var",
   variant_type == "delta", "ref"
 )
 
-gt <- fcase(
-  variant_type == "omicronlow", shortgi,
-  default = generation_time
-)
+gt <- if (variant_type == "omicronlow") shortgi else generation_time
 
-inc <- fcase(
-  variant_type == "omicronlow", shortinc,
-  default = incubation_period
-)
+inc <- if (variant_type == "omicronlow") shortinc else incubation_period
 
 Rtcalc(
     src.dt[, .(region, date, confirm = get(variable))],
-    target_folder = file.path(.args[4], 1), variant_type),
+    target_folder = tail(.args, 1),
     log = variant_type,
-
+ verbose = TRUE,
     gi = gt, ip = inc
 )
