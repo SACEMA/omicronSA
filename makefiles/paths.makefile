@@ -7,6 +7,6 @@ OUTDIR := ${LNDIR}/output
 FIGDIR := ${OUTDIR}/fig
 DATADIR := refdata
 MKDIRS := ${OUTDIR} ${INDIR}
-COVIDM := covidm
+COVIDM ?= covidm
 
 VPATH = ${INDIR}:${OUTDIR}
