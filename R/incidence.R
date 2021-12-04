@@ -8,7 +8,7 @@ suppressPackageStartupMessages({
 .args <- if (interactive()) file.path(
     "analysis",
     c("input", "output"),
-    c("prov_ts_90_pub.RDS", "incidence.rds")
+    c("prov_ts_90_pub.rds", "incidence.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
 dt <- readRDS(.args[1])
