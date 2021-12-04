@@ -1,10 +1,10 @@
 
 # for non-make users:
 # general syntax is
-#
+# 
 # target: dependency1 dependency2 ...
 #   commands run in the terminal
-#
+# 
 # target & dependencies being files
 # in general, this repo follows a paradigm of listing code file as first dependency,
 # followed by inputs files to that code
