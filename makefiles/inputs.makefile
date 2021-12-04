@@ -7,8 +7,11 @@ ${INDIR}/timing.rds: R/timing.R | ${INDIR}
 ${INDIR}/incidence.rds: R/incidence.R ${INDIR}/prov_ts_90_pub.rds
 	$(call R)
 
+${INDIR}/ensemble_incidence.rds: R/ensemble.R ${INDIR}/incidence.rds ${INDIR}/sgtf.sim.rds
+	$(call R)
+
 # ML/JD TODO: fill in rule
-# ${INDIR}/frequencies.rds: R/frequency.R ${INDIR}/SGTF.csv
+# ${INDIR}/sgtf.sim.rds: R/frequency.R ${INDIR}/SGTF.csv
 #	$(call R)
 
 INS := $(patsubst %,${INDIR}/%.rds,timing incidence frequencies)
