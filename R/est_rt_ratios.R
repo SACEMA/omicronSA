@@ -4,7 +4,7 @@ suppressPackageStartupMessages({
     require(EpiNow2)
 })
 
-.debug <- c("omicron","delta","omicronlo")[1]
+.debug <- c("omicron","delta","omicronlo")[2]
 .args <- if (interactive()) {
   c(
     file.path(
@@ -17,6 +17,13 @@ suppressPackageStartupMessages({
 } else {
   commandArgs(trailingOnly = TRUE)
 }
+
+#' on this date, significant Omicron announcement
+#' followed by more extensive testing, likely to artificially increase case
+#' growth
+#' see: XXXXX
+
+maxdate <- as.Date("2021-11-27")
 
 #' from covidm parameterization
 mean_generation_interval <- 6.375559
@@ -73,7 +80,7 @@ smps <- 1e3
 
 time.dt <- readRDS(.args[1])
 
-inc.dt <- as.data.table(readRDS(.args[2]))[sample <= 10]
+inc.dt <- as.data.table(readRDS(.args[2]))[sample <= 10][date <= maxdate]
 
 time.dt[wave == "omicron" & !is.na(start),
     # inc.dt[, .(edate = max(date)), by=province], on=.(province),
