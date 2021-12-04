@@ -36,7 +36,7 @@ q.dt <- rbind(
     }, by = .(region, date)]
 )
 
-p <- ggplot(q.dt) +
+p <- function(dt) ggplot(dt) +
     aes(date, color = scenario, fill = scenario) +
     facet_grid(region ~ .) +
     geom_ribbon(
@@ -50,6 +50,11 @@ p <- ggplot(q.dt) +
     geom_line(aes(y = md, linetype = "median")) +
     coord_cartesian(xlim = as.Date(c("2021-10-10", NA)), ylim = c(1, 4)) +
     theme_minimal() +
+    geom_rect(
+        aes(xmin = as.Date("2021-11-27"), xmax = dmax, ymin=0, ymax=Inf),
+        data = function(dt) dt[, .(dmax=max(date)), by=.(region)],
+        inherit.aes = FALSE, color = "grey", alpha = 0.1
+    ) +
     scale_x_date(NULL) +
     scale_y_continuous(expression(R[eff]^Omicron/R[eff]^Delta)) + # nolint
     scale_linetype_manual(
@@ -60,4 +65,4 @@ p <- ggplot(q.dt) +
         , labels = c(omicron = "Same GI", omicronfast = "shorter\nOmicron")
     )
 
-ggsave(tail(.args, 1), p, width = 14, height = 7, dpi = 600)
+ggsave(tail(.args, 1), p(q.dt), width = 14, height = 7, dpi = 600)

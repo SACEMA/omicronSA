@@ -9,9 +9,9 @@ suppressPackageStartupMessages({
     c("omicron_ratios", "omicron_ratios.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
-fls <- list.files(
+fls <- grep("2021-11-27", list.files(
   .args[1], "estimate_samples.rds", full.names = TRUE, recursive = TRUE
-)
+), value = TRUE)
 
 consolidated <- rbindlist(lapply(fls, function(fl) {
   tmp <- tail(strsplit(dirname(fl), "/")[[1]], 3)
