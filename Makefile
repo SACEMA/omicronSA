@@ -1,10 +1,10 @@
 
 # for non-make users:
 # general syntax is
-# 
+#
 # target: dependency1 dependency2 ...
 #   commands run in the terminal
-# 
+#
 # target & dependencies being files
 # in general, this repo follows a paradigm of listing code file as first dependency,
 # followed by inputs files to that code
@@ -16,7 +16,7 @@
 include makefiles/paths.makefile
 
 default: all
-all: support inputs rt mobility susceptible thresholds sessioninfo
+all: support inputs rt mobility susceptible thresholds figures sessioninfo
 
 # automates some setup tasks & provides convenience definitions
 # particular, provides definition of R such that:
@@ -43,7 +43,10 @@ susceptible: ${INDIR}/susceptibility.rds ${OUTDIR}/ngm_ratios.rds
 
 # details for calculating the transmissibillity/immune escape thresholds
 include makefiles/thresholds.makefile
-thresholds: ${OUTDIR}/thresholds.rds ${FIGDIR}/thresholds.png
+thresholds: ${OUTDIR}/thresholds.rds
+
+include makefiles/figures.makefile
+figures: figs
 
 # generate sessioninfo when running make
 .PHONY: sessioninfo
