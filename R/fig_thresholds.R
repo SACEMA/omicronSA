@@ -79,6 +79,12 @@ pref <- plotter(
 ) + theme(
     strip.text = element_blank()
 )
+prefonlygp <- plotter(
+    q.dt[Province == "GP" & variable == "transmissibility" & delesc == "ref" & sero == "ref"]
+) + theme(
+    strip.text = element_blank()
+) + zoom
+
 p <- plotter(q.dt[variable == "transmissibility"])
 plo <- plotter(q.dt[variable == "transmissibilitylo"])
 
@@ -91,6 +97,7 @@ saver <- function(plt, pat) ggsave(
 )
 
 saver(pref, "ref_%s")
+saver(prefonlygp, "ref_onlygp_%s")
 saver(pref + zoom, "ref_gp_%s")
 saver(p, "%s")
 saver(plo, "lo_%s")
