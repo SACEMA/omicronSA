@@ -33,35 +33,26 @@ omisub[, epi_sample := 1:.N, by = region]
 comps <- rbind(
     ngmref.dt[
         ngmref.dt[
-            between(immune_escape, 0.145, 0.155),
+          between(immune_escape, 0.145, 0.155),
             .SD,
             .SDcols = -c("immune_escape")],
             on = .(epi_sample, sero, province)
     ][,
     ngmratio := multiplier / i.multiplier][,
-    delesc := "ref"],
+    delesc := "0"],
     ngmref.dt[
         ngmref.dt[
-            between(immune_escape, 0.045, 0.055),
+            between(immune_escape, 0.245, 0.255),
             .SD,
             .SDcols = -c("immune_escape")
         ],
         on = .(epi_sample, sero, province)
     ][,
     ngmratio := multiplier / i.multiplier][,
-    delesc := "lo"],
-    ngmref.dt[
-        ngmref.dt[
-            between(immune_escape, 0.045, 0.055),
-            .SD,
-            .SDcols = -c("immune_escape")],
-            on = .(epi_sample, sero, province)
-    ][,
-    ngmratio := multiplier / i.multiplier][,
-    delesc := "hi"]
+    delesc := "ref"]
 )
 
-scan.dt <- comps[omisub, on = .(province = region, epi_sample)]
+scan.dt <- comps[omisub, on = .(province = region, epi_sample), nomatch = 0]
 
 scan.dt[,
     transmissibility := ratio / ngmratio][,

@@ -31,7 +31,7 @@ inputs: ${INS} ${INDIR}/susceptibility.rds
 
 # details for estimating Rt, ratios figures etc
 include makefiles/rt.makefile
-rt: omi_ratios
+rt: omiratios
 
 # details for getting contact matrix adjustments
 include makefiles/mobility.makefile
