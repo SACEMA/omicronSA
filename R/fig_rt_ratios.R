@@ -38,7 +38,7 @@ q.dt <- rbind(
 
 p <- function(dt) ggplot(dt) +
     aes(date, color = scenario, fill = scenario) +
-    facet_grid(region ~ .) +
+    facet_wrap(~region) +
     geom_ribbon(
         aes(ymin = lo95, ymax = hi95, linetype = "95%"),
         alpha = 0.1, size = 0.25
@@ -48,14 +48,13 @@ p <- function(dt) ggplot(dt) +
         alpha = 0.1, size = 0.25
     ) +
     geom_line(aes(y = md, linetype = "median")) +
-    coord_cartesian(xlim = as.Date(c("2021-10-10", NA)), ylim = c(1, 4)) +
-    theme_minimal() +
-    geom_rect(
-        aes(xmin = as.Date("2021-11-27"), xmax = dmax, ymin=0, ymax=Inf),
-        data = function(dt) dt[, .(dmax=max(date)), by=.(region)],
-        inherit.aes = FALSE, color = "grey", alpha = 0.1
+    coord_cartesian(ylim = c(1, 4), xlim=as.Date(c("2021-10-03", "2021-11-27"))) + 
+    theme_minimal(base_size = 16) +
+    scale_x_date(
+        NULL, date_breaks = "weeks", date_minor_breaks = "days", labels = function(b) {
+            c("",format(b[2],"%b %d"),format(b[3:5],"%d"),format(b[6],"%b %d"), format(b[7:(length(b)-1)],"%d"), "")
+        }
     ) +
-    scale_x_date(NULL) +
     scale_y_continuous(expression(R[eff]^Omicron/R[eff]^Delta)) + # nolint
     scale_linetype_manual(
         NULL, values = c(median = "solid", `50%` = "dashed", `95%`="dotted")
@@ -63,6 +62,10 @@ p <- function(dt) ggplot(dt) +
     scale_fill_discrete(
         "Generation\nInterval", aesthetics = c("color", "fill")
         , labels = c(omicron = "Same GI", omicronfast = "shorter\nOmicron")
+    ) +
+    theme(
+        legend.position = c(0.5, 0), legend.justification = c(0.5, 0),
+        legend.direction = "horizontal"
     )
 
 ggsave(tail(.args, 1), p(q.dt[region == "GP"]), width = 14, height = 7, dpi = 600)
