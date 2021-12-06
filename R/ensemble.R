@@ -8,7 +8,7 @@ suppressPackageStartupMessages({
     c(
         file.path(
             "analysis", "input",
-            c("incidence.rds", "sgtf.sims.rds")
+            c("incidence.rds", "sssims.rds")
         ),
         file.path(
             "analysis", "output", "incidence_ensemble.rds"
@@ -32,6 +32,9 @@ regionkey = c(
 )
 
 freq <- as.data.table(readRDS(.args[2]))[, province := regionkey[as.character(prov)] ]
+
+#' TODO some error in upstream results generation
+freq <- freq[,.(est_prop = est_prop[1]), keyby=.(prov, province, date, sample)]
 
 set.seed(8675309)
 inc.dt <- readRDS(.args[1])[

@@ -7,7 +7,7 @@ ${INDIR}/timing.rds: R/timing.R | ${INDIR}
 ${INDIR}/incidence.rds: R/incidence.R ${INDIR}/prov_ts_90_pub.rds
 	$(call R)
 
-${INDIR}/incidence_ensemble.rds: R/ensemble.R ${INDIR}/incidence.rds ${INDIR}/sgtf.sims.rds
+${INDIR}/incidence_ensemble.rds: R/ensemble.R ${INDIR}/incidence.rds ${INDIR}/sssims.rds
 	$(call R)
 
 # ML/JD TODO: fill in rule
@@ -15,10 +15,3 @@ ${INDIR}/incidence_ensemble.rds: R/ensemble.R ${INDIR}/incidence.rds ${INDIR}/sg
 #	$(call R)
 
 INS := $(patsubst %,${INDIR}/%.rds,timing incidence frequencies)
-
-# TBD TODO:
-# ${FIGDIR}/frequency_vis.png: something.R ${INDIR}/frequencies.rds
-#	$(call R)
-# 
-# ${FIGDIR}/var_incidence.png: something2.R ${INS}
-#	$(call R)
