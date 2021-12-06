@@ -1,5 +1,5 @@
 
-figures: $(patsubst %,${FIGDIR}/%.png,omicron_ratios thresholds)
+figs: $(patsubst %,${FIGDIR}/%.png,omicron_ratios thresholds)
 
 ${FIGDIR}/frequencies.png: R/fig_frequency.R $(addprefix ${INDIR}/,sssims.rds simbig.quasi.rds simbig.bin.rds)
 	$(call R)
