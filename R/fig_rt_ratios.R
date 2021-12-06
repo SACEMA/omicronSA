@@ -65,4 +65,4 @@ p <- function(dt) ggplot(dt) +
         , labels = c(omicron = "Same GI", omicronfast = "shorter\nOmicron")
     )
 
-ggsave(tail(.args, 1), p(q.dt), width = 14, height = 7, dpi = 600)
+ggsave(tail(.args, 1), p(q.dt[region == "GP"]), width = 14, height = 7, dpi = 600)
