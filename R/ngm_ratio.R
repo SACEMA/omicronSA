@@ -16,7 +16,6 @@ suppressPackageStartupMessages({
     "input",
     c("susceptibility.rds", "timing.rds", "mobility.rds")
   ),
-  file.path("..", "SA2UK_alt", "covidm"),
   file.path("analysis", "output", "ngm_ratios.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
@@ -44,38 +43,37 @@ contact_schedule <- mob.dt[
   ), by = .(region = abbr)
 ]
 
-cm_path <- tail(.args, 2)[1]
-cm_force_rebuild <- F;
-cm_build_verbose <-  F;
-cm_force_shared <-  T
-cm_version <-  2
-suppressPackageStartupMessages({
-  source(file.path(cm_path, "R", "covidm.R"))
-})
+delay_gamma <- function(mu, shape, t_max, t_step) {
+  scale = mu / shape;
+  t_points = seq(0, t_max, by = t_step);
+  heights = pgamma(t_points + t_step/2, shape, scale = scale) - 
+    pgamma(pmax(0, t_points - t_step/2), shape, scale = scale);
+  return (data.table(t = t_points, p = heights / sum(heights)))
+}
 
-calllist <- list(
-  "South Africa", "South Africa",
-  dE  = cm_delay_gamma(2.5, 2.5, t_max = 15, t_step = 0.25)$p,
-  dIp = cm_delay_gamma(1.5, 4.0, t_max = 15, t_step = 0.25)$p,
-  dIs = cm_delay_gamma(3.5, 4.0, t_max = 15, t_step = 0.25)$p,
-  dIa = cm_delay_gamma(5.0, 4.0, t_max = 15, t_step = 0.25)$p
-)
+mean_dur <- function(dX, time_step) {
+  ts <- seq(0, by=time_step, length.out = length(dX))
+  sum(dX * ts)
+}
 
-calllist2 <- calllist
-calllist2$dE <- cm_delay_gamma(1.25, 1.25, t_max = 15, t_step = 0.25)$p
-
-#' note: population size irrelevant to NGM calculation,
-#' and differences in provincial age distro already accounted for
-#' in contact matrices and seropos values
-params <- cm_base_parameters_SEI3R(
-  deterministic = TRUE,
-  pop = list(do.call(cm_build_pop_SEI3R, calllist))
-)
-
-params2 <- cm_base_parameters_SEI3R(
-  deterministic = TRUE,
-  pop = list(do.call(cm_build_pop_SEI3R, calllist2))
-)
+ngmR <- function(
+  dIp = delay_gamma(1.5, 4.0, t_max = 15, t_step = 0.25)$p,
+  dIs = delay_gamma(3.5, 4.0, t_max = 15, t_step = 0.25)$p,
+  dIa = delay_gamma(5.0, 4.0, t_max = 15, t_step = 0.25)$p,
+  cms, mweights,
+  fIs = 1, fIp = 1, fIa = 0.5,
+  uval, yval,
+  u_multiplier = 1
+) {
+  durIp <- mean_dur(dIp, 0.25)
+  durIs <- mean_dur(dIs, 0.25)
+  durIa <- mean_dur(dIa, 0.25)
+  mixing <- 
+  ngm = u * u_multiplier * t(t(contacts) * (
+    y * (fIp * durIp + fIs * durIs) + 
+      (1 - y) * fIa * durIa))
+  Re(eigen(ngm)$values[1])
+}
 
 us <- function(sdt.row) {
   rep(
@@ -111,14 +109,12 @@ ref.dt <- ensemble.dt[, {
     u <- us(.SD); y <- ys(.SD)
     sero.scns[, {
         cs <- contact_schedule[region == province, c(home, work, other, school)]
-        testpop <- params;
-        testpop$pop[[1]]$matrices <- cms[[province]]
-        multi <- sapply(immune_escape, function(imm) cm_eigen_ngm(
-          testpop,
+        multi <- sapply(immune_escape, function(imm) ngmR(
+          contacts = cms[[province]],
           u_multiplier = 1 - escapable * (1 - imm) - non_reinfectable,
           contact_reductions = 1 - cs,
           uval = u,
-          yval = y)$R0)
+          yval = y))
         .(immune_escape = immune_escape, multiplier = multi)
       }, by = .(sero, province)
     ]

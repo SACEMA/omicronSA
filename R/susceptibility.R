@@ -14,7 +14,7 @@ proj.dt <- readRDS(.args[1])[
     .(province, date = time, age, escapable, non_reinfectable)
 ]
 
-#' covidm NGM calculation uses 16 instead of 7 age categories,
+#' NGM calculation / contact matrices use 16 instead of 7 age categories,
 #' so have to smear protection estimates
 AR.dt <- proj.dt[,
     .(
