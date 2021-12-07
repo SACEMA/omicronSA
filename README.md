@@ -20,7 +20,6 @@ Folder| Purpose
 [`R`](R/) | R scripts each containing a step in the analysis workflow.
 [`makefiles`](makefiles/) | Components of the workflow built using the scripts from the `R` folder. See the README for this folder for further details.
 [`refdata`](refdata/) | Key reference data used in this analysis. See the README in this folder for further details.
-[`covidm`](covidm/) | The deterministic discrete time COVID-19 model used in this analysis. See the repository for further details.
 [`.devcontainer`](.devcontainer/) | Resources for reproducibility using `vscode` and `docker`.
 
 ## Key files
