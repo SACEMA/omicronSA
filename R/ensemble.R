@@ -8,7 +8,7 @@ suppressPackageStartupMessages({
     c(
         file.path(
             "analysis", "input",
-            c("incidence.rds", "sssims.rds")
+            c("incidence.rds", "sssims.rds", "simbig.bin.rds")
         ),
         file.path(
             "analysis", "output", "incidence_ensemble.rds"
@@ -31,10 +31,12 @@ regionkey = c(
     ALL="ALL"
 )
 
-freq <- as.data.table(readRDS(.args[2]))[, province := regionkey[as.character(prov)] ]
+freq.best <- as.data.table(readRDS(.args[2]))[, province := regionkey[as.character(prov)] ]
+freq.fallback <- as.data.table(readRDS(.args[3]))[
+    !(prov %in% unique(freq.best$prov))
+][, province := regionkey[as.character(prov)] ]
 
-#' TODO some error in upstream results generation
-freq <- freq[,.(est_prop = est_prop[1]), keyby=.(prov, province, date, sample)]
+freq <- rbind(freq.best, freq.fallback)
 
 set.seed(8675309)
 inc.dt <- readRDS(.args[1])[
