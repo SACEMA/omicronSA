@@ -10,23 +10,43 @@ suppressPackageStartupMessages({
         "input", c("sssims.rds", "simbig.quasi.rds", "simbig.bin.rds")
     ),
     file.path(
+        "input", "sgtf.rds"
+    ),
+    file.path(
         "output", "fig", "frequencies.png"
     )
 )) else {
     commandArgs(trailingOnly = TRUE)
 }
 
+regionkey = c(
+    EC="EASTERN CAPE",
+    FS="FREE STATE",
+    GP="GAUTENG",
+    KZN="KWAZULU-NATAL",
+    LP="LIMPOPO",
+    MP="MPUMALANGA",
+    NC="NORTHERN CAPE",
+    NW="NORTH WEST",
+    WC="WESTERN CAPE",
+    ALL="ALL"
+)
+
 freq.models <- rbind(
     as.data.table(readRDS(.args[1]))[, model := "ss" ],
     as.data.table(readRDS(.args[2]))[, model := "quasi" ],
     as.data.table(readRDS(.args[3]))[, model := "bin" ]    
-)
+)[, province := regionkey[as.character(prov)] ]
+
+raw.dt <- readRDS(tail(.args, 2)[1])[, est_prop := SGTF/total ]
 
 ppanels <- ggplot(
-    freq.models[prov != "GP"][between(date,"2021-10-03","2021-11-27")][sample <= 100]
+    freq.models[province != "GAUTENG"][between(date,"2021-10-03","2021-11-27")][sample <= 100]
 ) + aes(date, est_prop, color = model, group = interaction(sample, model)) +
-    facet_wrap(~prov) +
+    facet_wrap(~province) +
     geom_line(alpha = 0.05) +
+    geom_point(aes(size=total, color="observed", group=NULL), data = raw.dt[province != "GAUTENG"], alpha = 0.5) +
+    geom_blank(aes(size=total, color="observed", group=NULL), data = raw.dt[province == "GAUTENG"]) +
     coord_cartesian(ylim = c(0.005, 0.995)) +
     scale_y_continuous(NULL, breaks = c(0.01, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99), trans = "logit") +
     scale_x_date(
@@ -35,13 +55,15 @@ ppanels <- ggplot(
         }
     ) +
     scale_color_discrete("Fitting Model", guide = guide_legend(override.aes = list(alpha = 1))) +
-    theme_minimal(base_size = 14) + theme(axis.text.x = element_blank())
+    theme_minimal(base_size = 12) + theme(axis.text.x = element_blank())
 
 gppanel <- ggplot(
     freq.models[prov == "GP"][between(date,"2021-10-03","2021-11-27")][sample <= 100]
 ) + aes(date, est_prop, color = model, group = interaction(sample, model)) +
     facet_wrap(~prov) +
     geom_line(alpha = 0.05) +
+    geom_point(aes(size=total, color="observed", group=NULL), data = raw.dt[province == "GAUTENG"], alpha = 0.5) +
+    geom_blank(aes(size=total, color="observed", group=NULL), data = raw.dt[province != "GAUTENG"]) +
     coord_cartesian(ylim = c(0.005, 0.995)) +
     scale_y_continuous("Fraction SGTF", breaks = c(0.01, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99), trans = "logit") +
     scale_x_date(
@@ -50,8 +72,8 @@ gppanel <- ggplot(
         }
     ) +
     scale_color_discrete("Fitting Model", guide = guide_legend(override.aes = list(alpha = 1))) +
-    theme_minimal(base_size = 14)
+    theme_minimal(base_size = 12)
 
 resp <- (ppanels | gppanel) + plot_layout(guides = "collect") & theme(legend.position = "bottom")
 
-ggsave(tail(.args, 1), resp, width = 8, height = 5, units = "in", dpi = 600)
+ggsave(tail(.args, 1), resp, width = 8, height = 5, units = "in", dpi = 600, bg = "white")
