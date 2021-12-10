@@ -30,33 +30,27 @@ omisub <- omiratios.dt[,
 ]
 omisub[, epi_sample := 1:.N, by = region]
 
-comps <- rbind(
+delta_imm_escape <- c(lo=0.05, md=0.10, hi=0.15)
+
+comps <- rbindlist(lapply(names(delta_imm_escape), function(ndimm) {
+  dimm <- delta_imm_escape[ndimm]
+  ngmref.dt[
     ngmref.dt[
-        ngmref.dt[
-          between(immune_escape, 0.145, 0.155),
-            .SD,
-            .SDcols = -c("immune_escape")],
-            on = .(epi_sample, sero, province)
-    ][,
-    ngmratio := multiplier / i.multiplier][,
-    delesc := "0"],
-    ngmref.dt[
-        ngmref.dt[
-            between(immune_escape, 0.245, 0.255),
-            .SD,
-            .SDcols = -c("immune_escape")
-        ],
-        on = .(epi_sample, sero, province)
-    ][,
-    ngmratio := multiplier / i.multiplier][,
-    delesc := "ref"]
-)
+      between(immune_escape, dimm-1e-3, dimm+1e-3),
+      .SD,
+      .SDcols = -c("immune_escape")],
+    on = .(epi_sample, sero, province)
+  ][,
+    ngmratio := multiplier / i.multiplierNo
+  ][,
+    delesc := ndimm
+  ]
+}))
 
 scan.dt <- comps[omisub, on = .(province = region, epi_sample), nomatch = 0]
 
 scan.dt[,
-    transmissibility := ratio / ngmratio][,
-    transmissibilitylo := ratiolow / ngmratio
+  c("transmissibility", "transmissibilitylo") := .(ratio / ngmratio, ratiolow / ngmratio)
 ]
 
 res <- melt(
