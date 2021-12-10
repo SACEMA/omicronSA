@@ -93,7 +93,7 @@ lapply(tarcols, function(variable, tlim) {
 
 lapply(tarcols, function(variable, tlim) {
   Rtcalc(
-    infs[date <= tlim, .(region=province, date, confirm = get(variable))],
+    inc.dt[date <= tlim, .(region=province, date, confirm = get(variable))],
     target_folder = file.path(tail(.args,1), variable),
     verbose = TRUE,
     gi = gt, ip = inc
