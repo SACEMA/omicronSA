@@ -19,7 +19,7 @@ gp.dt <- data.table(
     abbr = "GP",
     province = "GAUTENG",
     wave = c("omicron"),
-    start = as.Date(c("2021-11-07")),
+    start = as.Date(c("2021-11-14")),
     end   = as.Date(c(NA))
 )
 
