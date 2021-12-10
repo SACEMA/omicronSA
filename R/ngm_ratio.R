@@ -60,7 +60,7 @@ ngmR <- function(
   dIp = delay_gamma(1.5, 4.0, t_max = 15, t_step = 0.25)$p,
   dIs = delay_gamma(3.5, 4.0, t_max = 15, t_step = 0.25)$p,
   dIa = delay_gamma(5.0, 4.0, t_max = 15, t_step = 0.25)$p,
-  cms, mweights,
+  mixmatrix, mweights,
   fIs = 1, fIp = 1, fIa = 0.5,
   uval, yval,
   u_multiplier = 1
@@ -68,10 +68,10 @@ ngmR <- function(
   durIp <- mean_dur(dIp, 0.25)
   durIs <- mean_dur(dIs, 0.25)
   durIa <- mean_dur(dIa, 0.25)
-  mixing <- 
-  ngm = u * u_multiplier * t(t(contacts) * (
-    y * (fIp * durIp + fIs * durIs) + 
-      (1 - y) * fIa * durIa))
+  mixing <- Reduce(`+`, mapply(function(c, m) c*m, mixmatrix, mweights, SIMPLIFY = FALSE))
+  ngm = uval * u_multiplier * t(t(mixing) * (
+    yval * (fIp * durIp + fIs * durIs) + 
+      (1 - yval) * fIa * durIa))
   Re(eigen(ngm)$values[1])
 }
 
@@ -94,15 +94,24 @@ immune_escape <- seq(0, 1, by = 0.05)
 assumed.AR <- AR.dt[
   timing, on = .(province = abbr, date = start)][,
   .(
-    province, date, agegrp, escapable, non_reinfectable,
-    inc.room = 1 - non_reinfectable - escapable
+    province, date, agegrp, Rescapable, Vescapable, non_reinfectable,
+    inc.room = 1 - non_reinfectable - Rescapable - Vescapable
   )
 ]
 
 sero.scns <- rbind(
   assumed.AR[, sero := "ref" ],
-  copy(assumed.AR)[, escapable := escapable + inc.room * 0.5][, sero := "up"],
-  copy(assumed.AR)[, escapable := escapable * 0.5][, sero := "down"]
+  copy(assumed.AR)[,
+    c("Vescapable", "Rescapable") := .(
+      Vescapable + inc.room * Vescapable/(Rescapable+Vescapable) * 0.5,
+      Rescapable + inc.room * Rescapable/(Rescapable+Vescapable) * 0.5
+    )
+  ][, sero := "up"],
+  copy(assumed.AR)[,
+    c("Vescapable", "Rescapable") := .(
+      Vescapable * 0.5, Rescapable * 0.5
+    )
+  ][, sero := "down"]
 )
 
 ref.dt <- ensemble.dt[, {
@@ -110,12 +119,19 @@ ref.dt <- ensemble.dt[, {
     sero.scns[, {
         cs <- contact_schedule[region == province, c(home, work, other, school)]
         multi <- sapply(immune_escape, function(imm) ngmR(
-          contacts = cms[[province]],
-          u_multiplier = 1 - escapable * (1 - imm) - non_reinfectable,
-          contact_reductions = 1 - cs,
+          mixmatrix = cms[[province]],
+          u_multiplier = 1 - (Vescapable + Rescapable) * (1 - imm) - non_reinfectable,
+          mweights = cs,
           uval = u,
           yval = y))
-        .(immune_escape = immune_escape, multiplier = multi)
+        multiNoV <- sapply(immune_escape, function(imm) ngmR(
+          mixmatrix = cms[[province]],
+          u_multiplier = 1 - Vescapable - Rescapable * (1 - imm) - non_reinfectable,
+          mweights = cs,
+          uval = u,
+          yval = y))
+        
+        .(immune_escape = immune_escape, multiplier = multi, multiplierNo = multiNoV)
       }, by = .(sero, province)
     ]
   },
