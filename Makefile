@@ -27,7 +27,7 @@ support: dirs
 
 # details for formatting input data
 include makefiles/inputs.makefile
-inputs: ${INS} ${INDIR}/susceptibility.rds
+inputs: ${INS} ${INDIR}/susceptibility.rds ${DATADIR}/sgtf.rds
 
 # details for estimating Rt, ratios figures etc
 include makefiles/rt.makefile
