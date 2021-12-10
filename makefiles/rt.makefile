@@ -15,7 +15,7 @@ ${ESTDIR}:
 
 .PRECIOUS: ${ESTDIR}/%
 
-${OTHERRTDIR}: R/rt_primary_vs_reinf.R ${OUTDIR}/incidence.rds
+${OTHERRTDIR}: R/rt_primary_vs_reinf.R ${INDIR}/incidence.rds
 	$(call R)
 	touch $@
 
