@@ -4,14 +4,15 @@ ${INDIR}/timing.rds: R/timing.R | ${INDIR}
 	$(call R)
 
 # TODO define target to fetch reinfections series from preprint data sharing
-${INDIR}/incidence.rds: R/incidence.R ${INDIR}/prov_ts_90_pub.rds
+${INDIR}/incidence.rds: R/incidence.R ${INDIR}/prov_ts_90.RDS
 	$(call R)
 
-${INDIR}/incidence_ensemble.rds: R/ensemble.R ${INDIR}/incidence.rds ${INDIR}/sssims.rds
+${INDIR}/incidence_ensemble.rds: R/ensemble.R ${INDIR}/incidence.rds
 	$(call R)
 
-# ML/JD TODO: fill in rule
-# ${INDIR}/sgtf.sims.rds: R/frequency.R ${INDIR}/SGTF.csv
-#	$(call R)
+${DATADIR}/sgtf_ll.rds: R/link_sgtf.R ${INDIR}/pos_test_ll_90.RDS ${DATADIR}/sgtf_list_anon_20211209.dta
+	$(call R)
 
-INS := $(patsubst %,${INDIR}/%.rds,timing incidence frequencies)
+${DATADIR}/sgtf.rds: R/sgtf.R ${DATADIR}/sgtf_ll.rds
+	$(call R)
+

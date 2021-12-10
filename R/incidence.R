@@ -7,7 +7,7 @@ suppressPackageStartupMessages({
 
 .args <- if (interactive()) file.path(
     "analysis",
-    c("input", "output"),
+    "input",
     c("prov_ts_90.RDS", "incidence.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
