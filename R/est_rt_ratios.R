@@ -4,14 +4,10 @@ suppressPackageStartupMessages({
     require(EpiNow2)
 })
 
-.debug <- c("omicron","delta","omicronlo")[2]
+.debug <- c("omicron","delta","omicronlow")[1]
 .args <- if (interactive()) {
   c(
-    file.path(
-     "analysis",
-      c("input", "output", "output"),
-      c("timing.rds", "incidence_ensemble.rds")
-    ),
+    file.path("analysis", "output", "incidence_ensemble.rds"),
     file.path("analysis", "output", "omicron_ratios", .debug[1])
   )
 } else {
@@ -22,8 +18,6 @@ suppressPackageStartupMessages({
 #' followed by more extensive testing, likely to artificially increase case
 #' growth
 #' see: XXXXX
-
-maxdate <- as.Date("2021-11-27")
 
 #' from covidm parameterization
 mean_generation_interval <- 6.375559
@@ -78,22 +72,12 @@ est.ext <- 30
 crs <- 4
 smps <- 1e3
 
-time.dt <- readRDS(.args[1])
+inc.dt <- as.data.table(readRDS(.args[1]))[sample <= 50]
+inc.dt <- as.data.table(readRDS(.args[1]))[prov != "GP" & between(sample, 1, 38)]
 
-inc.dt <- as.data.table(readRDS(.args[2]))[sample <= 10][date <= maxdate]
-
-time.dt[wave == "omicron" & !is.na(start),
-    # inc.dt[, .(edate = max(date)), by=province], on=.(province),
-    end := start + 6
-]
-
-src.dt <- inc.dt[
-  time.dt,
-  on = .(province),
-  nomatch = 0,
+src.dt <- inc.dt[,
   .(
-    region = sprintf("%s_%i", abbr, sample), date, var, ref = tot - var,
-    breakpoint = between(date, start, end)
+    region = sprintf("%s_%i", prov, sample), date, var, ref = tot - var
   )
 ]
 
