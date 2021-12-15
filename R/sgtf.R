@@ -8,10 +8,13 @@ suppressPackageStartupMessages({
     file.path("analysis", "input", "sgtf.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
-ref <- readRDS(.args[1])[province != ""][!is.na(sgtf)]
+ref <- readRDS(.args[1])
 
-res <- dcast(ref, province + specreceiveddate ~ sgtf, fun.aggregate = length)
-setnames(res, c("0", "1"), c("nonSGTF","SGTF"))
+ref[, outcome := c("nonSGTF","SGTF")[as.integer(sgtf)+1] ]
+ref[, date := specreceiveddate ]
+ref[, reinf := inf > 1 ]
+
+res <- dcast(ref, prov + province + date + reinf + publicprivateflag ~ outcome, fun.aggregate = length)
 res[, total := nonSGTF + SGTF ]
 
 saveRDS(res, tail(.args, 1))

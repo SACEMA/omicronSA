@@ -29,6 +29,9 @@ support: dirs
 include makefiles/inputs.makefile
 inputs: ${INS} ${INDIR}/susceptibility.rds ${DATADIR}/sgtf.rds
 
+include makefiles/sgtf.makefile
+sgtf: sgtfensembling
+
 # details for estimating Rt, ratios figures etc
 include makefiles/rt.makefile
 rt: omiratios
