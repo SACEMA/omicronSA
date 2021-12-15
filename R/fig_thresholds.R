@@ -117,7 +117,7 @@ plotter2 <- function(dt) ggplot(dt) + aes(
         delesc = c(lo="Delta Esc. 5%", md="10%", hi="15%"),
         sero = c(down="-Half Sero+", ref="Est. Sero+", up="+Half Sero+")
     )
-) + coord_cartesian(expand = FALSE, ylim=c(1/2,8)) +
+) + coord_cartesian(expand = FALSE, ylim=c(1/2,4)) +
     geom_hline(yintercept = 1, linetype = "dashed") +
     geom_ribbon(aes(ymin=lo95, ymax=hi95, linetype = "95%"), alpha = 0.1, size = 0.1) +
     geom_ribbon(aes(ymin=lo50, ymax=hi50, linetype = "50%"), alpha = 0.1, size = 0.1) +
@@ -128,18 +128,18 @@ plotter2 <- function(dt) ggplot(dt) + aes(
         fill="grey", alpha=0.5, inherit.aes = FALSE
     ) +
     scale_y_continuous(
-        expression("Omicron Relative Transmissibilty "*(R[C]^Omicron/R[C]^Delta)),
+        expression(atop("BA.1 Relative Transmissibilty,",R[C]^"BA.1"/R[C]^"background")),
         trans = "log2",
-        breaks = 2^(-1:3),
-        labels = c("1/2","1","2","4","8")
+        breaks = 2^(-1:2),
+        labels = c("1/2","1","2","4")
     ) +
     scale_x_continuous(
-        "Immune Escape %", breaks = seq(0,1,by=.1), labels = label_percent(1, suffix = "")
+        "Immune Escape %", breaks = seq(0,1,by=.25), labels = label_percent(1, suffix = "")
     ) +
     scale_linetype_manual(NULL, values = c(median="solid", `50%`="dashed", `95%`="dotted")) +
     scale_color_discrete(
-        "Generation Time", aesthetics = c("color","fill"),
-        labels = c(transmissibility="Same", transmissibilitylo="Omicron shorter")
+        NULL, aesthetics = c("color","fill"),
+        labels = c(transmissibility="Same Gen. Interval", transmissibilitylo="BA.1 faster")
     ) +
     theme_minimal(base_size = 18) + theme(
         panel.spacing = unit(1.5, "line")
@@ -163,7 +163,7 @@ fold.redrange <- data.table(
     immune_escape_lo = .7, immune_escape_hi = .833, study="neutralization"
 )
 
-plotter2(q.censor[Province == "GP"]) +
+p <- plotter2(q.censor[Province == "GP"]) +
     geom_rect(aes(
         xmin = immune_escape_lo, xmax = immune_escape_hi, ymin = 1e5, ymax = 1e-5
     ), data = fold.redrange, fill = "green", alpha = 0.3, inherit.aes = FALSE) +
@@ -172,4 +172,14 @@ plotter2(q.censor[Province == "GP"]) +
     ), data = reinfs.range, fill = "purple", alpha = 0.3, inherit.aes = FALSE) +
     theme(legend.position = "bottom")
 
+pref <- plotter2(q.censor[Province == "GP" & sero == "ref" & delesc == "md"]) +
+    geom_rect(aes(
+        xmin = immune_escape_lo, xmax = immune_escape_hi, ymin = 1e5, ymax = 1e-5
+    ), data = fold.redrange, fill = "green", alpha = 0.3, inherit.aes = FALSE) +
+    geom_rect(aes(
+        xmin = immune_escape_lo, xmax = immune_escape_hi, ymin = 1e5, ymax = 1e-5
+    ), data = function(dt) reinfs.range[delesc %in% unique(dt$delesc)], fill = "purple", alpha = 0.3, inherit.aes = FALSE) +
+    theme(legend.position = "bottom")
 
+saver(p, "mix_gp_all_%s")
+saver(pref, "mix_gp_ref_%s")
