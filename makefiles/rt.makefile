@@ -19,7 +19,7 @@ ${OTHERRTDIR}: R/rt_primary_vs_reinf.R ${INDIR}/incidence.rds
 	$(call R)
 	touch $@
 
-${ESTDIR}/%: R/est_rt_ratios.R ${INDIR}/timing.rds ${INDIR}/incidence_ensemble.rds | ${ESTDIR}
+${ESTDIR}/%: R/est_rt_ratios.R ${INDIR}/incidence_ensemble.rds | ${ESTDIR}
 	$(call R)
 	touch $@
 

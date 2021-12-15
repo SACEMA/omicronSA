@@ -5,13 +5,13 @@ suppressPackageStartupMessages({
     require(patchwork)
 })
 
+.debug <- c("2021-12-06", "2021-11-27")[1]
 .args <- if (interactive()) c(
-    file.path("refdata", "sgtf.rds"),
-    file.path("analysis", "output",
-        c("sgtf", file.path("fig", "frequencies.png"))
-)) else {
-    commandArgs(trailingOnly = TRUE)
-}
+    file.path("analysis", "input", "sgtf.rds"),
+    file.path("analysis", "output", "sgtf", .debug, "mergedfit.rds"),
+    file.path("analysis", "output", "sgtf", .debug, "sims.rds"),
+    file.path("analysis", "output", "fig", "frequencies.png")
+) else commandArgs(trailingOnly = TRUE)
 
 regionkey = c(
     EC="EASTERN CAPE",
@@ -26,62 +26,60 @@ regionkey = c(
     ALL="ALL"
 )
 
-sgtf.dt <- readRDS(.args[1])[specreceiveddate <= "2021-12-06"][, est_prop := SGTF/total ]
-setnames(sgtf.dt, "specreceiveddate", "date")
-fittings <- list.files(.args[2], "\\.rds", recursive = TRUE, full.names = TRUE)
+sgtf.dt <- readRDS(.args[1])[date <= "2021-12-06"]
+min.date <- sgtf.dt[, min(date)]
 
-#' TODO remove use.names once ensembling fixed upstream
-allfits <- rbindlist(lapply(fittings, function(fl) {
-    scnstr <- tail(strsplit(fl, .Platform$file.sep)[[1]], 2)
-    enddate <- scnstr[1]
-    model <- scnstr[2]
-    res <- as.data.table(readRDS(fl))[, c("model", "enddate") := .(model, enddate)]
-    res
-}), use.names=TRUE)
-allfits[, province := regionkey[as.character(prov)] ]
+fit.ref <- sgtf.dt[,.(
+    SGTF = sum(SGTF), nonSGTF = sum(nonSGTF), total = sum(total)
+), by=.(prov, date) ]
 
-ppanels <- ggplot(
-    allfits[province != "GAUTENG"][between(date, "2021-10-01", enddate)][sample <= 100]
-) + aes(date, est_prop, color = model, group = interaction(sample, model, province, enddate)) +
-    facet_grid(province ~ enddate) +
-    geom_line(alpha = 0.05) +
-    geom_point(aes(size=total, color="observed", group=NULL), data = sgtf.dt[province != "GAUTENG"], alpha = 0.5) +
-    geom_blank(aes(size=total, color="observed", group=NULL), data = sgtf.dt[province == "GAUTENG"]) +
-    coord_cartesian(ylim = c(0.005, 0.995)) +
-    scale_y_continuous(NULL, breaks = c(0.01, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99), trans = "logit") +
-    scale_x_date(
-        NULL, date_breaks = "weeks", date_minor_breaks = "days", labels = function(b) {
-            c("",format(b[2],"%b %d"),format(b[3:5],"%d"),format(b[6],"%b %d"), format(b[7:(length(b)-1)],"%d"), "")
-        }
-    ) +
-    scale_color_discrete("Fitting Model", guide = guide_legend(override.aes = list(alpha = 1))) +
-    scale_size_area() +
-    theme_minimal(base_size = 12) + theme(
-       # axis.text.x = element_blank()
+baselogis <- function(
+    tvec, # observation times
+    loc, delta_r, lodrop,
+    # fitting: offset, relative growth rate, drop
+    logain # fixed: gain
+){
+    drop <- plogis(lodrop)
+    gain <- plogis(logain)
+    ptrue <- plogis((tvec-loc)*delta_r)
+    
+    return(ptrue*(1-gain) + (1-ptrue)*drop)
+}
+
+times <- 0:90
+fittings <- readRDS(.args[2])
+estimates <- rbindlist(lapply(fittings, function (fit) {
+    co <- as.list(coef(fit$m))
+    data.table(
+        date = min.date + times,
+        est_SGTF = baselogis(times, co$loc, co$delta_r, co$lodrop, co$logain),
+        est_BA1 = baselogis(times, co$loc, co$delta_r, -Inf, -Inf)
     )
+}), idcol = "prov")
 
-ggsave("something.png", ppanels, width = 7.5, height = 10, dpi = 600, bg = "white")
+ens.dt <- readRDS(.args[3])
 
-gppanel <- ggplot(
-    allfits[prov == "GP"][between(date,"2021-10-03", enddate)][sample <= 100]
-) + aes(date, est_prop, color = model, group = interaction(sample, model, province, enddate)) +
-    facet_grid(province ~ enddate) +
-    geom_line(alpha = 0.05) +
-    geom_point(aes(size=total, color="observed", group=NULL), data = sgtf.dt[province == "GAUTENG"], alpha = 0.5) +
-    geom_blank(aes(size=total, color="observed", group=NULL), data = sgtf.dt[province != "GAUTENG"]) +
-    coord_cartesian(ylim = c(0.005, 0.995)) +
-    scale_y_continuous("Fraction SGTF", breaks = c(0.01, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99), trans = "logit") +
-    scale_x_date(
-        NULL, date_breaks = "weeks", date_minor_breaks = "days", labels = function(b) {
-            c("",format(b[2],"%b %d"),format(b[3:5],"%d"),format(b[6],"%b %d"), format(b[7:(length(b)-1)],"%d"), "")
-        }
+plotter <- function(dt, fit.dt, ens.dt, start.date = "2021-10-15") ggplot(dt[date >= start.date]) + aes(date) +
+    facet_wrap(~prov) +
+    geom_line(aes(y=prop, group=sample, color = "ensemble"), data = ens.dt[date >= start.date], alpha = 0.05) +
+    geom_line(aes(y=est_SGTF, color = "est. SGTF"), data = fit.dt[date >= start.date]) +
+    geom_line(aes(y=est_BA1, color = "est. BA.1"), data = fit.dt[date >= start.date]) +
+    geom_point(aes(y=SGTF/total, size = sqrt(1/total), alpha = sqrt(total), color = "observation")) +
+    theme_minimal() +
+    coord_cartesian(ylim=c(0.01, 0.99)) +
+    scale_y_continuous("Proportion (logit scale)", trans="logit", breaks = c(0.01, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99)) +
+    scale_size_area(
+        "Samples", breaks = sqrt(1/c(1,10,100,1000)), max_size = 10, labels = function(b) 1/b^2,
+        guide = guide_legend(override.aes = list(alpha = c(0.1,0.3,0.7,1)))
     ) +
-    scale_color_discrete("Fitting Model", guide = guide_legend(override.aes = list(alpha = 1))) +
-    scale_size_area() + theme_minimal(base_size = 12)
+    scale_x_date(NULL, date_breaks = "months", date_minor_breaks = "weeks", date_labels = "%b") +
+    scale_color_manual(NULL, values = c(observation="black", ensemble = "firebrick", `est. SGTF`="dodgerblue", `est. BA.1`="red")) +
+    scale_alpha_continuous(NULL, range = c(0.1, 1), guide = "none")
 
-ggsave("something2.png", gppanel, width = 7.5, height = 7.5, dpi = 600, bg = "white")
+p <- plotter(
+    fit.ref[prov %in% unique(estimates$prov)],
+    estimates[date <= max(fit.ref$date)+7],
+    ens.dt[date <= max(fit.ref$date)+7]
+) + theme(legend.position = "bottom")
 
-
-resp <- (ppanels | gppanel) + plot_layout(guides = "collect") & theme(legend.position = "bottom")
-
-ggsave(tail(.args, 1), resp, width = 8, height = 5, units = "in", dpi = 600, bg = "white")
+ggsave(tail(.args, 1), p, width = 8, height = 5, units = "in", dpi = 600, bg = "white")
