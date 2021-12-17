@@ -7,7 +7,7 @@
 
 fit.list <- grep(
     basename(tail(.args, 1)),
-    grep("sim", list.files(.args[1], "rds$", full.names = TRUE), invert = TRUE, value = TRUE),
+    grep("sim", list.files(.args[1], "rdata$", full.names = TRUE), invert = TRUE, value = TRUE),
     invert = TRUE, value = TRUE
 )
 

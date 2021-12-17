@@ -3,14 +3,13 @@ suppressPackageStartupMessages({
     require(data.table)
 })
 
-.debug <- c("2021-12-06", "2021-11-27")[1]
 .args <- if (interactive()) {
     c(
         file.path(
             "analysis", "input", "incidence.rds"
         ),
         file.path(
-            "analysis", "output", "sgtf", .debug, "sims.rds"
+            "analysis", "output", "sgtf"
         ),
         file.path(
             "analysis", "output", "incidence_ensemble.rds"
@@ -33,11 +32,16 @@ regionkey = c(
     ALL="ALL"
 )
 
-end.date <- as.Date(basename(dirname(.args[2])))
-sims <- readRDS(.args[2])[date <= end.date]
+# end.date <- as.Date(basename(dirname(.args[2])))
+sims <- rbindlist(lapply(
+    list.files(.args[2], "sims", recursive = TRUE, full.names = TRUE),
+    function(fn) readRDS(fn)[, end.date := basename(dirname(fn)) ]
+))
+
 sims[, province := regionkey[as.character(prov)] ]
 
 #' TODO note need to exclude sample 64, 80 for negative slopes
+#' fine with the current 50 sample cut off
 sims[,any(diff(prop)<0),by=.(prov, sample)][V1==TRUE]
 
 #' TODO: naming => preference order
