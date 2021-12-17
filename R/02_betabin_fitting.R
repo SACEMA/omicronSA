@@ -10,29 +10,33 @@ set.seed(1200)
 .args <- if (interactive()) c(
     file.path("analysis", "input", "sgtf.rds"),
     file.path("R", "bbmle_utils.R"),
-    file.path("analysis", "output", "sgtf", .debug, "ssbin.rds")
+    file.path("analysis", "output", "sgtf", .debug[1], "betabin.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
-tarfile <- tail(.args, 1)
-enddate <- as.Date(basename(dirname(tarfile)))
-
-sgtf.dt <- readRDS(.args[1])[date <= enddate]
+sgtf.dt <- readRDS(.args[1])[date <= "2021-12-06"]
 source(.args[2])
 
 #' Assume gain of S gene binding by BA.1 very unlikely;
 #' fitting loss of S gene binding by background
-# fixList <- list(logain = -4.5)
+fixList <- list(lodrop = -Inf, logain = -Inf)
 
 #' Iterate until convergence
 cList <- list(maxit = 10000)
 
+#' TODO item to compartmentalize
+bbsizemax <- 100
+
 #' Logistic function with imperfect testing
 baselogis <- function(
-    tvec, loc, delta_r, lodrop, logain
-) {
+    tvec, # observation times
+    loc, delta_r, lodrop,
+    # fitting: offset, relative growth rate, drop
+    logain # fixed: gain
+){
     drop <- plogis(lodrop)
     gain <- plogis(logain)
     ptrue <- plogis((tvec-loc)*delta_r)
+    
     return(ptrue*(1-gain) + (1-ptrue)*drop)
 }
 
@@ -41,37 +45,36 @@ fit.ref <- sgtf.dt[,.(
    SGTF = sum(SGTF), nonSGTF = sum(nonSGTF), total = sum(total)
 ), by=.(prov, time = as.integer(date - min.date))]
 
-sbin <- list(
-    loc = as.numeric(as.Date("2021-10-15")-min.date),
-    delta_r = 0.3,
-    lodrop = -3
-    , logain = -4
-)
-
-# fixList <- list(
-#     logain = -7
-# )
-
 res <- lapply(fit.ref[, unique(prov)], function(tarprov) {
     dt <- fit.ref[prov == tarprov]
+    sbin <- list(
+        loc = mean(dt$time),
+        delta_r = 0.5,
+        lodrop = -3, logain = -4,
+        lbbsize = 0
+    )
     
     m0 <- mle2(
-        SGTF ~ dbinom(
+        SGTF ~ dbetabinom_sigma(
             prob = baselogis(time, loc, delta_r, lodrop, logain)
             , size = total
+            , sigma = exp(lbbsize)
         ) 
         , start = sbin, data = dt, method = "Nelder-Mead"
-        #, fixed = fixList
+        , fixed = fixList
         , control = cList
     )
     
-    m <- update(m0, start = as.list(coef(m0)), method = "BFGS")
-    
-    ci <- try(confint(m))
-    if (!inherits(ci, "matrix") || anyNA(ci)) {
+    if (coef(m0)[["lbbsize"]] > log(bbsizemax)) {
         return(NULL)
     } else {
-        list(m=m, ci=ci)
+        m <- update(m0, start = as.list(coef(m0)), method = "BFGS")
+        ci <- try(confint(m))
+        if (!inherits(ci, "matrix") || anyNA(ci)) {
+            return(NULL)
+        } else {
+            return(list(m=m, ci=ci))
+        }
     }
 })
 
@@ -85,7 +88,7 @@ saveRDS(ret, tail(.args, 1))
 #' require(ggplot2)
 #' fit.ref[res[q == "50 %"], on=.(prov), predict := baselogis(time, loc, delta_r, lodrop, logain)]
 #' fit.ref[res[q == "50 %"], on=.(prov), predictBA1 := plogis((time-loc)*delta_r) ]
-#' ggplot(fit.ref) + aes(time + min.date) + facet_grid(prov ~ .) +
+#' ggplot(fit.ref[!is.na(predict)]) + aes(time) + facet_grid(prov ~ .) +
 #'     geom_point(aes(y=SGTF/total, size = total, color = "observed SGTF"), alpha = 0.4) +
 #'     geom_line(aes(y=predict, color="predicted SGTF")) +
 #'     geom_line(aes(y=predictBA1, color="predicted BA.1")) +
