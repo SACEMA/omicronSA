@@ -3,21 +3,28 @@ suppressPackageStartupMessages({
     require(data.table)
 })
 
-.args <- if (interactive()) file.path(
-    "analysis",
-    c("output", "output"),
-    c("omicron_ratios", "omicron_ratios.rds")
+.debug <- c("2021-12-06", "2021-11-27")[1]
+.args <- if (interactive()) c(
+  file.path("analysis","output","omicron_ratios"),
+  .debug,
+  file.path("analysis","output",.debug,"omicron_ratios.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
-fls <- grep("2021-11-27", list.files(
+tarend <- .args[2]
+fls <- grep(tarend, list.files(
   .args[1], "estimate_samples.rds", full.names = TRUE, recursive = TRUE
 ), value = TRUE)
 
+subsample <- 100; start.date <- "2021-10-15"
 consolidated <- rbindlist(lapply(fls, function(fl) {
   tmp <- tail(strsplit(dirname(fl), "/")[[1]], 3)
   regionsamp <- strsplit(tmp[2], "_")[[1]]
   scenario <- tmp[1]
-  readRDS(fl)[variable == "R", .(
+  readRDS(fl)[
+    sample <= subsample
+  ][
+    date >= start.date
+  ][variable == "R", .(
     scenario = scenario,
     region = regionsamp[1],
     freq_sample = as.integer(regionsamp[2]),
