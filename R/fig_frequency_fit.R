@@ -3,6 +3,7 @@ suppressPackageStartupMessages({
     require(data.table)
     require(ggplot2)
     require(patchwork)
+    require(bbmle)
 })
 
 .debug <- c("2021-12-06", "2021-11-27")[1]
@@ -48,6 +49,13 @@ baselogis <- function(
 
 times <- 0:90
 fittings <- readRDS(.args[2])
+delr.dt <- rbindlist(lapply(fittings, function(fit) {
+    co <- as.list(coef(fit$m))
+    ci <- fit$ci
+    data.table(
+        delr = sprintf("%.2g (%.2g, %.2g)", co$delta_r, ci["delta_r",1], ci["delta_r",2])
+    )
+}), idcol = "prov")
 estimates <- rbindlist(lapply(fittings, function (fit) {
     co <- as.list(coef(fit$m))
     data.table(
@@ -65,6 +73,7 @@ plotter <- function(dt, fit.dt, ens.dt, start.date = "2021-10-15") ggplot(dt[dat
     geom_line(aes(y=est_SGTF, color = "est. SGTF"), data = fit.dt[date >= start.date]) +
     geom_line(aes(y=est_BA1, color = "est. BA.1"), data = fit.dt[date >= start.date]) +
     geom_point(aes(y=SGTF/total, size = sqrt(1/total), alpha = sqrt(total), color = "observation")) +
+    geom_text(aes(x=as.Date("2021-10-15"), y=0.9, label = sprintf("delta-r\n%s",delr)), data = delr.dt, size = 2, hjust = 0) +
     theme_minimal() +
     coord_cartesian(ylim=c(0.01, 0.99)) +
     scale_y_continuous("Proportion (logit scale)", trans="logit", breaks = c(0.01, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99)) +
