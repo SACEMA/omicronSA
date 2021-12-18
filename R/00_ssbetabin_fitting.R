@@ -13,7 +13,10 @@ set.seed(1200)
     file.path("analysis", "output", "sgtf", .debug[1], "ssbetabin.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
-sgtf.dt <- readRDS(.args[1])[date <= "2021-12-06"]
+tarfile <- tail(.args, 1)
+enddate <- as.Date(basename(dirname(tarfile)))
+
+sgtf.dt <- readRDS(.args[1])[date <= enddate]
 source(.args[2])
 
 #' Assume gain of S gene binding by BA.1 very unlikely;
