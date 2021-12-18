@@ -6,7 +6,6 @@ suppressPackageStartupMessages({
     require(bbmle)
 })
 
-.debug <- c("2021-12-06", "2021-11-27")[1]
 .args <- if (interactive()) c(
     file.path("analysis", "input", "sgtf.rds"),
     file.path("analysis", "output", "sgtf"),
@@ -81,7 +80,7 @@ p <- ggplot(plot.dt) + aes(date, linetype=model) +
         "Samples", breaks = sqrt(1/c(1,10,100,1000)), max_size = 10, labels = function(b) 1/b^2,
         guide = guide_legend(override.aes = list(alpha = c(0.1,0.3,0.7,1)))
     ) +
-    scale_x_date(NULL, date_breaks = "months", date_minor_breaks = "weeks", date_labels = "%b") +
+    scale_x_date("Sample Receipt Date", date_breaks = "months", date_minor_breaks = "weeks", date_labels = "%b") +
     scale_alpha_continuous(NULL, range = c(0.1, 1), guide = "none") +
     scale_linetype("Fit Model") +
     scale_color_discrete(NULL) +

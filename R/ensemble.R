@@ -3,16 +3,17 @@ suppressPackageStartupMessages({
     require(data.table)
 })
 
+.debug <- c("2021-11-27", "2021-12-06")[1]
 .args <- if (interactive()) {
     c(
         file.path(
             "analysis", "input", "incidence.rds"
         ),
         file.path(
-            "analysis", "output", "sgtf"
+            "analysis", "output", "sgtf", .debug, "sims.rds"
         ),
         file.path(
-            "analysis", "output", "incidence_ensemble.rds"
+            "analysis", "output", .debug, "incidence_ensemble.rds"
         )
     )
 } else {
@@ -33,10 +34,7 @@ regionkey = c(
 )
 
 # end.date <- as.Date(basename(dirname(.args[2])))
-sims <- rbindlist(lapply(
-    list.files(.args[2], "sims", recursive = TRUE, full.names = TRUE),
-    function(fn) readRDS(fn)[, end.date := basename(dirname(fn)) ]
-))
+sims <- readRDS(.args[2])
 
 sims[, province := regionkey[as.character(prov)] ]
 
