@@ -3,7 +3,7 @@ suppressPackageStartupMessages({
     require(data.table)
 })
 
-.debug <- c("2021-11-27", "2021-12-06")[1]
+.debug <- c("2021-11-27", "2021-12-06")[2]
 .args <- if (interactive()) {
     c(
         file.path(
@@ -33,8 +33,8 @@ regionkey = c(
     ALL="ALL"
 )
 
-# end.date <- as.Date(basename(dirname(.args[2])))
-sims <- readRDS(.args[2])
+end.date <- as.Date(basename(dirname(tail(.args, 1))))
+sims <- readRDS(.args[2])[date <= end.date]
 
 sims[, province := regionkey[as.character(prov)] ]
 

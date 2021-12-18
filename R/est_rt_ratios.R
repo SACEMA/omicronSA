@@ -7,7 +7,7 @@ suppressPackageStartupMessages({
 .debug <- c("omicron","delta","omicronlow")[1]
 .args <- if (interactive()) {
   c(
-    file.path("analysis", "output", "incidence_ensemble.rds"),
+    file.path("analysis", "output", "2021-11-27", "incidence_ensemble.rds"),
     file.path("analysis", "output", "omicron_ratios", .debug[1])
   )
 } else {
@@ -73,7 +73,7 @@ crs <- 4
 smps <- 1e3
 
 inc.dt <- as.data.table(readRDS(.args[1]))[sample <= 50]
-inc.dt <- as.data.table(readRDS(.args[1]))[prov != "GP" & between(sample, 1, 38)]
+# inc.dt <- as.data.table(readRDS(.args[1]))[prov != "GP" & between(sample, 1, 38)]
 
 src.dt <- inc.dt[,
   .(
