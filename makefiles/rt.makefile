@@ -2,7 +2,10 @@
 ESTDIR := ${OUTDIR}/omicron_ratios
 OTHERRTDIR := ${OUTDIR}/rt
 
-omiratios: $(patsubst %,${OUTDIR}/%/omicron_ratios.rds,2021-12-06 2021-11-27)
+omiratios:
+	${MAKE} ${OUTDIR}/2021-12-06/omicron_ratios.rds TARDATE=2021-12-06
+	${MAKE} ${OUTDIR}/2021-11-27/omicron_ratios.rds TARDATE=2021-11-27
+
 rtstudy: ${OTHERRTDIR}
 
 RTESTS := $(addprefix ${ESTDIR}/,omicron omicronlow delta)
@@ -20,7 +23,9 @@ ${OTHERRTDIR}: R/rt_primary_vs_reinf.R ${INDIR}/incidence.rds
 	$(call R)
 	touch $@
 
-${ESTDIR}/%: R/est_rt_ratios.R ${INDIR}/incidence_ensemble.rds | ${ESTDIR}
+TARDATE ?= 2021-12-06
+
+${ESTDIR}/%: R/est_rt_ratios.R ${OUTDIR}/${TARDATE}/incidence_ensemble.rds | ${ESTDIR}
 	$(call R)
 	touch $@
 

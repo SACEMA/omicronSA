@@ -7,7 +7,7 @@ ${INDIR}/timing.rds: R/timing.R | ${INDIR}
 ${INDIR}/incidence.rds: R/incidence.R ${INDIR}/prov_ts_90.RDS
 	$(call R)
 
-${INDIR}/incidence_ensemble.rds: R/ensemble.R ${INDIR}/incidence.rds ${OUTDIR}/sgtf/2021-12-06/sims.rds
+${INDIR}/%/incidence_ensemble.rds: R/ensemble.R ${INDIR}/incidence.rds ${OUTDIR}/sgtf/%/sims.rds
 	$(call R)
 
 ${INDIR}/alt_incidence_ensemble.rds: R/ensemble.R ${INDIR}/incidence.rds ${OUTDIR}/sgtf/2021-12-06/alt_sims.rds
