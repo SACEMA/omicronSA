@@ -14,3 +14,6 @@ makefiles/local.makefile
 
 # don't include log files
 logs
+
+refdata/*.RDS
+refdata/*.dta
