@@ -6,22 +6,20 @@ suppressPackageStartupMessages({
 
 set.seed(1200)
 
-.debug <- c("2021-11-27", "2021-12-06")[2]
+.debug <- c("2021-11-27", "2021-12-06")[1]
 .args <- if (interactive()) c(
     file.path("analysis", "input", "sgtf.rds"),
     file.path("R", "bbmle_utils.R"),
-    file.path("analysis", "output", "sgtf", .debug[1], "betabin.rds")
+    file.path("analysis", "output", "sgtf", .debug[1], "sbetabin.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
-tarfile <- tail(.args, 1)
-enddate <- as.Date(basename(dirname(tarfile)))
-
-sgtf.dt <- readRDS(.args[1])[date <= enddate]
+end.date <- basename(dirname(tail(.args, 1)))
+sgtf.dt <- readRDS(.args[1])[date <= end.date]
 source(.args[2])
 
 #' Assume gain of S gene binding by BA.1 very unlikely;
 #' fitting loss of S gene binding by background
-fixList <- list(lodrop = -Inf, logain = -Inf)
+fixList <- list(logain = -7)
 
 #' Iterate until convergence
 cList <- list(maxit = 10000)
@@ -53,7 +51,7 @@ res <- lapply(fit.ref[, unique(prov)], function(tarprov) {
     sbin <- list(
         loc = mean(dt$time),
         delta_r = 0.5,
-        lodrop = -3, logain = -4,
+        lodrop = -3, logain = fixList$logain,
         lbbsize = 0
     )
     
@@ -71,7 +69,7 @@ res <- lapply(fit.ref[, unique(prov)], function(tarprov) {
     if (coef(m0)[["lbbsize"]] > log(bbsizemax)) {
         return(NULL)
     } else {
-        m <- update(m0, start = as.list(coef(m0)), method = "BFGS")
+        m <- update(m0, start = as.list(coef(m0)), fixed = fixList, method = "BFGS")
         ci <- try(confint(m))
         if (!inherits(ci, "matrix") || anyNA(ci)) {
             return(NULL)
