@@ -3,14 +3,13 @@ suppressPackageStartupMessages({
     require(data.table)
 })
 
+.debug <- c("2021-11-27", "2021-12-06")[2]
 .args <- if (interactive()) c(
     file.path("analysis", "input", "timing.rds"),
-    file.path(
-        "analysis",
-        "output",
-        c("omicron_ratios.rds", "ngm_ratios.rds")
-    ),
-    file.path("analysis", "output", "thresholds.rds")
+    file.path("analysis", "output", .debug, "omicron_ratios.rds"),
+    file.path("analysis", "output", "ngm_ratios.rds")
+    ,
+    file.path("analysis", "output", .debug, "thresholds.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
 timing <- readRDS(.args[1])

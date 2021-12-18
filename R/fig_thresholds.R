@@ -5,8 +5,9 @@ suppressPackageStartupMessages({
     require(scales)
 })
 
+.debug <- c("2021-11-27", "2021-12-06")[2]
 .args <- if (interactive()) c(
-    file.path("analysis", "output", "thresholds.rds"),
+    file.path("analysis", "output", .debug, "thresholds.rds"),
     file.path("analysis", "output", "fig", "thresholds.png")
 ) else commandArgs(trailingOnly = TRUE)
 
