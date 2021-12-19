@@ -32,6 +32,10 @@ File | Purpose
 
 # Reproducibillity
 
+## Reference & Analysis Directories
+
+External source data for the analysis should be placed in `refdata`. By default, `refdata` will *also* be used as the root directory for intermediate and final analysis products. We recommend creating a `makefiles/local.makefile` which redefines `REFDIR`.
+
 ## Dependencies
 
 All `R` package dependencies can be installed using (in the working directory of the repository): 
@@ -43,7 +47,7 @@ devtools::install_dev_deps(dependencies = TRUE)
 
 Alternatively the dependencies can be installed manually (see the `DESCRIPTION` file for details of the dependencies and their sources). The provided docker image may be used to fully reproduce our analysis environment and this can itself be built using the provided `Dockerfile`. See the [Docker documentation](https://docs.docker.com) for more detail on using docker. For `vscode` users a `.devcontainer` has been provided which when used with the `Remote development` extension will automate setting up the supplied `Dockerfile`. The environment last used to generate results is also summarised in `sessioninfo.txt`.
 
-## Data requirements
+## Data requirements - NB: NOT CURRENT
 
 This analysis requires the following data files which are not included in this repository:
 

@@ -2,16 +2,20 @@
 suppressPackageStartupMessages({
     require(data.table)
     require(ggplot2)
+    require(gghalves)
 })
 
+.debug <- c("2021-12-06", "2021-11-27")[1]
 .args <- if (interactive()) file.path(
-    "analysis",
-    c("input", "output", file.path("output", "fig")),
-    c("timing.rds", "omicron_ratios.rds", "omicron_ratios.png")
+    "analysis", "output",
+    c(
+        file.path(.debug,"omicron_ratios.rds"),
+        file.path("fig",.debug,"omicron_ratios.png")
+    )
 ) else commandArgs(trailingOnly = TRUE)
 
-timing <- readRDS(.args[1])
-res.dt <- readRDS(.args[2])
+enddate <- basename(dirname(tail(.args, 1)))
+res.dt <- readRDS(.args[1])
 
 regionkey = c(
     EC="EASTERN CAPE",
@@ -68,10 +72,10 @@ p <- function(dt) ggplot(dt) +
         alpha = 0.1, size = 0.25
     ) +
     geom_line(aes(y = md, linetype = "median")) +
-    coord_cartesian(ylim = c(1, 4), xlim=as.Date(c("2021-10-03", "2021-11-27"))) + 
+    coord_cartesian(ylim = c(1, 6), xlim=as.Date(c("2021-11-01", enddate))) + 
     theme_minimal(base_size = 16) +
     scale_x_date(
-        NULL, date_breaks = "weeks", date_minor_breaks = "days", labels = function(b) {
+        "Sample receipt date", date_breaks = "weeks", date_minor_breaks = "days", labels = function(b) {
             c("",format(b[2],"%b %d"),format(b[3:5],"%d"),format(b[6],"%b %d"), format(b[7:(length(b)-1)],"%d"), "")
         }
     ) +

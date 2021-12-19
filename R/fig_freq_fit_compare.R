@@ -25,7 +25,9 @@ regionkey = c(
     ALL="ALL"
 )
 
-sgtf.dt <- readRDS(.args[1])[date <= "2021-12-06"]
+enddate <- as.Date(basename(dirname(tail(.args, 1))))
+
+sgtf.dt <- readRDS(.args[1])[date <= enddate]
 min.date <- sgtf.dt[, min(date)]
 
 fit.ref <- sgtf.dt[,.(
@@ -80,7 +82,7 @@ p <- ggplot(plot.dt) + aes(date, linetype=model) +
         "Samples", breaks = sqrt(1/c(1,10,100,1000)), max_size = 10, labels = function(b) 1/b^2,
         guide = guide_legend(override.aes = list(alpha = c(0.1,0.3,0.7,1)))
     ) +
-    scale_x_date("Sample Receipt Date", date_breaks = "months", date_minor_breaks = "weeks", date_labels = "%b") +
+    scale_x_date("Sample receipt date", date_breaks = "months", date_minor_breaks = "weeks", date_labels = "%b") +
     scale_alpha_continuous(NULL, range = c(0.1, 1), guide = "none") +
     scale_linetype("Fit Model") +
     scale_color_discrete(NULL) +
