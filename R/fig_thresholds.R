@@ -160,9 +160,22 @@ reinfs.range <- data.table(
     ), immune_escape_lo = oddsimmedlo, immune_escape_hi = oddsimmedhi, study = "reinfection"
 )
 
-fold.redrange <- data.table(
-    immune_escape_lo = .7, immune_escape_hi = .833, study="neutralization"
-)
+foldredrange <- c(3, 8)
+khoury_get_1a = function(delta_evade_prop, fold_reduction) {
+    khoury_nat_med_1a = fread("refdata/Khoury_et_al_Nat_Med_fig_1a.csv")
+    
+    neut_titre = with(khoury_nat_med_1a,
+        approx(Efficacy, NeutTitreRelConvPlasma, (1-delta_evade_prop)*100)$y
+    )
+    neut_titre_new = neut_titre / fold_reduction
+    
+    1-with(khoury_nat_med_1a,
+           approx(NeutTitreRelConvPlasma, Efficacy, neut_titre_new)$y
+    )/100
+}
+
+imm.ref <- q.censor[, .(esc=unique(delesclim)), by=delesc]
+imm.ref[, c("lo", "hi") := as.list(khoury_get_1a(esc, foldredrange)), by=delesc ]
 
 p <- plotter2(q.censor[Province == "GP"]) +
     geom_rect(aes(
