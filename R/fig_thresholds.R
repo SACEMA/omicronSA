@@ -8,7 +8,7 @@ suppressPackageStartupMessages({
 .debug <- c("2021-11-27", "2021-12-06")[2]
 .args <- if (interactive()) c(
     file.path("analysis", "output", .debug, "thresholds.rds"),
-    file.path("analysis", "output", "fig", "thresholds.png")
+    file.path("analysis", "output", "fig", .debug, "thresholds.png")
 ) else commandArgs(trailingOnly = TRUE)
 
 thresholds <- readRDS(.args[1])
@@ -110,15 +110,16 @@ saver(pzoom, "gp_%s")
 saver(plozoom, "lo_gp_%s")
 
 
-plotter2 <- function(dt) ggplot(dt) + aes(
+plotter2 <- function(dt, bglayer) ggplot(dt) + aes(
     immune_escape, color = variable, fill = variable
 ) + facet_grid(
     delesc ~ sero,
     labeller = labeller(
-        delesc = c(lo="Delta Esc. 5%", md="10%", hi="15%"),
-        sero = c(down="-Half Sero+", ref="Est. Sero+", up="+Half Sero+")
+        delesc = c(lo="Background\nEvasion 5%", md="Background\nEvasion 10%", hi="Background\nEvasion 15%"),
+        sero = c(down="Higher\nSusceptible %", ref="Reference\nSusceptible %", up="Lower\nSusceptible %")
     )
 ) + coord_cartesian(expand = FALSE, ylim=c(1/2,4)) +
+    bglayer +
     geom_hline(yintercept = 1, linetype = "dashed") +
     geom_ribbon(aes(ymin=lo95, ymax=hi95, linetype = "95%"), alpha = 0.1, size = 0.1) +
     geom_ribbon(aes(ymin=lo50, ymax=hi50, linetype = "50%"), alpha = 0.1, size = 0.1) +
@@ -146,20 +147,6 @@ plotter2 <- function(dt) ggplot(dt) + aes(
         panel.spacing = unit(1.5, "line")
     )
 
-reinfs.dt <- readRDS("analysis/input/emp_haz_sens_an_90_cabp.RDS")
-reinfs.dt[, OF := mean_rh_X4*(1-mean_rh_W3)/((1-mean_rh_X4)*mean_rh_W3) ]
-OFrange <- reinfs.dt[OF > 1, range(OF)]
-
-immescdel <- c(0.05, 0.10, 0.15)
-oddsimmedlo <- immescdel/(1-immescdel)*OFrange[1]
-oddsimmedhi <- immescdel/(1-immescdel)*OFrange[2]
-
-reinfs.range <- data.table(
-    delesc = factor(
-        c("lo","md","hi"), levels = c("lo","md","hi"), ordered = TRUE
-    ), immune_escape_lo = oddsimmedlo, immune_escape_hi = oddsimmedhi, study = "reinfection"
-)
-
 foldredrange <- c(3, 8)
 khoury_get_1a = function(delta_evade_prop, fold_reduction) {
     khoury_nat_med_1a = fread("refdata/Khoury_et_al_Nat_Med_fig_1a.csv")
@@ -177,22 +164,79 @@ khoury_get_1a = function(delta_evade_prop, fold_reduction) {
 imm.ref <- q.censor[, .(esc=unique(delesclim)), by=delesc]
 imm.ref[, c("lo", "hi") := as.list(khoury_get_1a(esc, foldredrange)), by=delesc ]
 
-p <- plotter2(q.censor[Province == "GP"]) +
+khourycol <- "yellow"
+
+geom_intensify <- function (alpha = 0.2, size = 0.2) list(
+    geom_ribbon(
+        aes(ymin=lo95, ymax=hi95, linetype = "95%"),
+        alpha = alpha, size = size, data = function(dt) {
+            rbind(
+                dt[imm.ref, on=.(delesc), nomatch = 0][between(immune_escape, lo, hi)],
+                dt[imm.ref, on=.(delesc), nomatch = 0][, {
+                    .(
+                        immune_escape = unique(lo),
+                        lo95 = approx(immune_escape, lo95, unique(lo))$y,
+                        lo50 = approx(immune_escape, lo50, unique(lo))$y,
+                        hi50 = approx(immune_escape, hi50, unique(lo))$y,
+                        hi95 = approx(immune_escape, hi95, unique(lo))$y
+                    )
+                }, by=.(Province, sero, delesc, variable)],
+                dt[imm.ref, on=.(delesc), nomatch = 0][, {
+                    .(
+                        immune_escape = unique(hi),
+                        lo95 = approx(immune_escape, lo95, unique(hi))$y,
+                        lo50 = approx(immune_escape, lo50, unique(hi))$y,
+                        hi50 = approx(immune_escape, hi50, unique(hi))$y,
+                        hi95 = approx(immune_escape, hi95, unique(hi))$y
+                    )
+                }, by=.(Province, sero, delesc, variable)],
+                fill = TRUE
+            )[order(immune_escape)]
+        }
+    ),
+    geom_ribbon(
+        aes(ymin=lo50, ymax=hi50, linetype = "50%"),
+        alpha = alpha, size = size, data = function(dt) {
+            rbind(
+                dt[imm.ref, on=.(delesc), nomatch = 0][between(immune_escape, lo, hi)],
+                dt[imm.ref, on=.(delesc), nomatch = 0][, {
+                    .(
+                        immune_escape = unique(lo),
+                        lo95 = approx(immune_escape, lo95, unique(lo))$y,
+                        lo50 = approx(immune_escape, lo50, unique(lo))$y,
+                        hi50 = approx(immune_escape, hi50, unique(lo))$y,
+                        hi95 = approx(immune_escape, hi95, unique(lo))$y
+                    )
+                }, by=.(Province, sero, delesc, variable)],
+                dt[imm.ref, on=.(delesc), nomatch = 0][, {
+                    .(
+                        immune_escape = unique(hi),
+                        lo95 = approx(immune_escape, lo95, unique(hi))$y,
+                        lo50 = approx(immune_escape, lo50, unique(hi))$y,
+                        hi50 = approx(immune_escape, hi50, unique(hi))$y,
+                        hi95 = approx(immune_escape, hi95, unique(hi))$y
+                    )
+                }, by=.(Province, sero, delesc, variable)],
+                fill = TRUE
+            )[order(immune_escape)]
+        }
+    )
+)
+
+p <- plotter2(
+    q.censor[Province == "GP"],
     geom_rect(aes(
-        xmin = immune_escape_lo, xmax = immune_escape_hi, ymin = 1e5, ymax = 1e-5
-    ), data = fold.redrange, fill = "green", alpha = 0.3, inherit.aes = FALSE) +
-    geom_rect(aes(
-        xmin = immune_escape_lo, xmax = immune_escape_hi, ymin = 1e5, ymax = 1e-5
-    ), data = reinfs.range, fill = "purple", alpha = 0.3, inherit.aes = FALSE) +
+        xmin = lo, xmax = hi, ymin = 1e5, ymax = 1e-5
+    ), data = imm.ref, fill = khourycol, alpha = 0.3, inherit.aes = FALSE)
+) + geom_intensify() +
     theme(legend.position = "bottom")
 
-pref <- plotter2(q.censor[Province == "GP" & sero == "ref" & delesc == "md"]) +
+pref <- plotter2(
+    q.censor[Province == "GP" & sero == "ref" & delesc == "md"],
     geom_rect(aes(
-        xmin = immune_escape_lo, xmax = immune_escape_hi, ymin = 1e5, ymax = 1e-5
-    ), data = fold.redrange, fill = "green", alpha = 0.3, inherit.aes = FALSE) +
-    geom_rect(aes(
-        xmin = immune_escape_lo, xmax = immune_escape_hi, ymin = 1e5, ymax = 1e-5
-    ), data = function(dt) reinfs.range[delesc %in% unique(dt$delesc)], fill = "purple", alpha = 0.3, inherit.aes = FALSE) +
+        xmin = lo, xmax = hi, ymin = 1e5, ymax = 1e-5
+    ), data = function(dt) imm.ref[delesc %in% unique(dt$delesc)], fill = khourycol, alpha = 0.3, inherit.aes = FALSE)
+) + geom_intensify() +
     theme(legend.position = "bottom")
 
 saver(p, "mix_gp_all_%s")
