@@ -10,7 +10,7 @@ suppressPackageStartupMessages({
     file.path("analysis", "input", "sgtf.rds"),
     file.path("analysis", "output", "sgtf"),
     file.path("analysis", "input", "plotref.rda"),
-    file.path("analysis", "output", "fig", "stgf_model_fit_comparison.png")
+    file.path("analysis", "output", "fig", "stgf_model_comparison.png")
 ) else commandArgs(trailingOnly = TRUE)
 
 sgtf.dt <- readRDS(.args[1])

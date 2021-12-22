@@ -21,3 +21,8 @@ ${FIGDIR}/prime_vs_reinf.png: ${RFIG}/fig_rt_prime_vs_reinf.R ${OTHERRTDIR}
 
 ${FIGDIR}/%/thresholds.png: ${RFIG}/fig_thresholds.R ${OUTDIR}/%/thresholds.rds
 	$(call R)
+
+${FIGDIR}/sgtf_model_comparison.png: ${RFIG}/sgtf_model_comparison.R ${INDIR}/sgtf.rds ${OUTDIR}/sgtf | ${INDIR}/plotref.rda
+	$(call R,$|)
+
+figtest: ${FIGDIR}/sgtf_model_comparison.png
