@@ -74,4 +74,4 @@ p <- ggplot(plot.dt) + aes(date, linetype=model) +
     scale_color_discrete(NULL) +
     theme(legend.position = "bottom")
 
-ggsave(tail(.args, 1), p, width = 14, height = 7, units = "in", dpi = 600, bg = "white")
+saveslide(tail(.args, 1), p)
