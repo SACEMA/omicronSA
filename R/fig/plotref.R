@@ -95,6 +95,26 @@ scale_alpha_samples <- gg.scale.wrapper(
 	range = c(0.1, 1)
 )
 
+scale_y_doubling <- gg.scale.wrapper(
+	scale_y_continuous,
+	trans = "log2",
+	breaks = function(ls) 2^seq(1,log(ls[2],2),by=3),
+	minor_breaks = function(ls) 2^seq(0,log(ls[2],2),1)
+)
+
+scale_color_incidence <- gg.scale.wrapper(
+	scale_color_manual,
+	name = NULL,
+	labels = c(del="Est. background", var="Est. BA.1", obs="All Test+", rep="Reported"),
+	values = c(del="dodgerblue", var="firebrick", obs="black", rep="grey")
+)
+
+scale_alpha_ensemble <- gg.scale.wrapper(
+	scale_alpha_manual,
+	name = NULL,
+	values = c(ensemble = 0.1, central = 1), guide = "none"
+)
+
 regionkey = c(
 	EC="EASTERN CAPE",
 	FS="FREE STATE",
@@ -107,5 +127,25 @@ regionkey = c(
 	WC="WESTERN CAPE",
 	ALL="ALL"
 )
+
+#' TODO DRY
+saveslide <- function(
+	...,
+	dpi = 600, bg = "white"
+) ggsave(..., width = 14, height = 7, units = "in", dpi = 600, bg = bg)
+
+savepage <- function(
+	...,
+	dpi = 600, bg = "white"
+) ggsave(..., width = 7.5, height = 10, units = "in", dpi = 600, bg = bg)
+
+savehalfpage <- function(
+	...,
+	dpi = 600, bg = "white"
+) ggsave(..., width = 7.5, height = 5, units = "in", dpi = 600, bg = bg)
+
+savesq <- function(
+	..., dim = 6, dpi = 600, bg = "white"
+) ggsave(..., width = 6, height = 6, units = "in", dpi = 600, bg = bg)
 
 save(file = tail(.args, 1), list = ls())
