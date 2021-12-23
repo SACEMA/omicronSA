@@ -10,9 +10,6 @@ figs: $(patsubst %,${FIGDIR}/%.png,2021-12-06/omicron_ratios 2021-11-27/omicron_
 ${FIGDIR}/frequencies.png: ${RFIG}/fig_frequency.R $(addprefix ${INDIR}/,sssims.rds simbig.quasi.rds simbig.bin.rds) ${INDIR}/sgtf.rds
 		$(call R)
 
-${FIGDIR}/incidence_ensemble.png: ${RFIG}/fig_incidence_ensemble.R ${OUTDIR}/incidence_ensemble.rds
-	$(call R)
-
 ${FIGDIR}/%/omicron_ratios.png: ${RFIG}/fig_rt_ratios.R ${OUTDIR}/%/omicron_ratios.rds
 	$(call R)
 
@@ -23,6 +20,9 @@ ${FIGDIR}/%/thresholds.png: ${RFIG}/fig_thresholds.R ${OUTDIR}/%/thresholds.rds
 	$(call R)
 
 ${FIGDIR}/sgtf_model_comparison.png: ${RFIG}/sgtf_model_comparison.R ${INDIR}/sgtf.rds ${OUTDIR}/sgtf | ${INDIR}/plotref.rda
+	$(call R,$|)
+
+${FIGDIR}/%/incidence_ensemble.png: ${RFIG}/incidence_ensemble.R ${INDIR}/incidence.rds ${OUTDIR}/%/incidence_ensemble.rds | ${INDIR}/plotref.rda
 	$(call R,$|)
 
 figtest: ${FIGDIR}/sgtf_model_comparison.png
