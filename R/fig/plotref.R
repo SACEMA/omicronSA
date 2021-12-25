@@ -115,6 +115,8 @@ scale_alpha_ensemble <- gg.scale.wrapper(
 	values = c(ensemble = 0.1, central = 1), guide = "none"
 )
 
+fromdate <- "2021-10-01"
+
 regionkey = c(
 	EC="EASTERN CAPE",
 	FS="FREE STATE",
