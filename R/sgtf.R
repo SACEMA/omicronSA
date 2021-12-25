@@ -4,17 +4,11 @@ suppressPackageStartupMessages({
 })
 
 .args <- if (interactive()) c(
-    file.path("refdata", "sgtf_ll.rds"),
+    file.path("refdata", "sgtf.csv"),
     file.path("analysis", "input", "sgtf.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
-ref <- readRDS(.args[1])
+ref <- fread(.args[1])[, .(nonSGTF = sum(nonSGTF), SGTF = sum(SGTF)), by=.(prov, date)]
+ref[, total := nonSGTF + SGTF ]
 
-ref[, outcome := c("nonSGTF","SGTF")[as.integer(sgtf)+1] ]
-ref[, date := specreceiveddate ]
-ref[, reinf := inf > 1 ]
-
-res <- dcast(ref, prov + province + date + reinf + publicprivateflag ~ outcome, fun.aggregate = length)
-res[, total := nonSGTF + SGTF ]
-
-saveRDS(res, tail(.args, 1))
+saveRDS(ref, tail(.args, 1))
