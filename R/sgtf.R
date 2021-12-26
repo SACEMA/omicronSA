@@ -8,7 +8,7 @@ suppressPackageStartupMessages({
     file.path("analysis", "input", "sgtf.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
-ref <- fread(.args[1])[, .(nonSGTF = sum(nonSGTF), SGTF = sum(SGTF)), by=.(prov, date)]
+ref <- fread(.args[1])
 ref[, total := nonSGTF + SGTF ]
 
 saveRDS(ref, tail(.args, 1))
