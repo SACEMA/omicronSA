@@ -15,10 +15,14 @@ RAWSGTF ?= $(shell ls -t ${DATADIR}/sgtf_list_anon_*.dta | head -1)
 ${DATADIR}/sgtf_ll.rds: R/link_sgtf.R ${DATADIR}/pos_test_ll_90.RDS ${RAWSGTF}
 	$(call R)
 
+${DATADIR}/sgt%.csv:
+	echo "you do not have the necessary raw data to make $(@F) from scratch."
+	touch $@
+
 ${DATADIR}/sgtf.csv: R/sgtf_public.R ${DATADIR}/sgtf_ll.rds 
 	$(call R)
 
 ${INDIR}/sgtf.rds: R/sgtf.R | ${DATADIR}/sgtf.csv
 	$(call R,$|)
 
-sgtf: ${INDIR}/sgtf.rds
+sgtfraw: ${INDIR}/sgtf.rds
