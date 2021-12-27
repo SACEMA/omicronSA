@@ -12,8 +12,10 @@ analysis/*
 # never include local.makefile configurations
 makefiles/local.makefile
 
-# don't include log files
+# don't include EpiNow2 log files
 logs
 
+# in general, don't include raw inputs
 refdata/*.RDS
 refdata/*.dta
+refdata/*.log
