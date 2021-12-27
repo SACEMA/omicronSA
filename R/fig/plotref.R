@@ -130,6 +130,43 @@ regionkey = c(
 	ALL="ALL"
 )
 
+gg.geom.wrapper <- function(
+	geom_fun,
+	...
+) {
+	stopifnot(!missing(geom_fun))
+	defs <- list(...)
+	if (!length(defs)) warning(
+		"provided no default arguments; consider using scale_fun directly."
+	)
+	
+	return(function(...) {
+		#' this different ... is how you get a function back that let's you
+		#' override defaults, set other arguments to scale_... functions
+		.ellipsis <- list(...)
+		.args <- defs
+		.args[names(.ellipsis)] <- .ellipsis
+		do.call(geom_fun, .args)
+	})
+}
+
+geom_sgtf_point <- gg.geom.wrapper(
+	geom_point,
+	mapping = aes(y=SGTF/total, size = total, alpha = total, color = "observation")
+)
+
+#' for use when quantile-ing for plots
+qspans <- c(0.95, 0.5)
+qlims <- sort(c({
+	tmp <- 0 + (1 - qspans) / 2
+	names(tmp) <- sprintf("lo%i", qspans * 100)
+	tmp
+}, {
+	tmp <- 1 - (1 - qspans) / 2
+	names(tmp) <- sprintf("hi%i", qspans * 100)
+	tmp
+}, c(md = .5)))
+
 #' TODO DRY
 saveslide <- function(
 	...,
