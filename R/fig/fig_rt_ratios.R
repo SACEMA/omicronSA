@@ -72,13 +72,13 @@ p <- function(dt) ggplot(dt) +
         alpha = 0.1, size = 0.25
     ) +
     geom_line(aes(y = md, linetype = "median")) +
-    coord_cartesian(ylim = c(1, 6), xlim=as.Date(c("2021-11-01", enddate))) + 
+    coord_cartesian(ylim = c(1, NA), xlim=as.Date(c("2021-11-01", enddate))) + 
     theme_minimal(base_size = 16) +
-    scale_x_date(
-        "Sample receipt date", date_breaks = "weeks", date_minor_breaks = "days", labels = function(b) {
-            c("",format(b[2],"%b %d"),format(b[3:5],"%d"),format(b[6],"%b %d"), format(b[7:(length(b)-1)],"%d"), "")
-        }
-    ) +
+    # scale_x_date(
+    #     "Sample receipt date", date_breaks = "weeks", date_minor_breaks = "days", labels = function(b) {
+    #         c("",format(b[2],"%b %d"),format(b[3:5],"%d"),format(b[6],"%b %d"), format(b[7:(length(b)-1)],"%d"), "")
+    #     }
+    # ) +
     scale_y_continuous(expression(R[t]^"BA.1"/R[t]^"other")) + # nolint
     scale_linetype_manual(
         NULL, values = c(median = "solid", `50%` = "dashed", `95%`="dotted")

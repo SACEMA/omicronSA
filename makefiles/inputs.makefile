@@ -10,14 +10,21 @@ ${INDIR}/incidence.rds: R/incidence.R ${INDIR}/prov_ts_90.RDS
 ${INDIR}/%/incidence_ensemble.rds: R/ensemble.R ${INDIR}/incidence.rds ${OUTDIR}/sgtf/%/sims.rds
 	$(call R)
 
-${INDIR}/alt_incidence_ensemble.rds: R/ensemble.R ${INDIR}/incidence.rds ${OUTDIR}/sgtf/2021-12-06/alt_sims.rds
+RAWSGTF ?= $(shell ls -t ${DATADIR}/sgtf_list_anon_*.dta | head -1)
+
+SGTFERR := ${DATADIR}/sgtf.log
+
+${DATADIR}/sgtf_ll.rds: R/link_sgtf.R ${DATADIR}/pos_test_ll_90.RDS ${RAWSGTF}
+	$(call R) 2> $(SGTFERR)
+
+${DATADIR}/sgt%.csv:
+	echo "you do not have the necessary raw data to make $(@F) from scratch."
+	touch $@
+
+${DATADIR}/sgtf.csv: R/sgtf_public.R ${DATADIR}/sgtf_ll.rds 
 	$(call R)
 
-${DATADIR}/sgtf_ll.rds: R/link_sgtf.R ${INDIR}/pos_test_ll_90.RDS ${DATADIR}/sgtf_list_anon_20211209.dta
-	$(call R)
+${INDIR}/sgtf.rds: R/sgtf.R | ${DATADIR}/sgtf.csv
+	$(call R,$|)
 
-${DATADIR}/sgtf.rds: R/sgtf.R ${DATADIR}/sgtf_ll.rds
-	$(call R)
-
-${DATADIR}/sgtf.csv: R/sgtf_public.R ${DATADIR}/sgtf.rds
-	$(call R)
+sgtfraw: ${INDIR}/sgtf.rds
