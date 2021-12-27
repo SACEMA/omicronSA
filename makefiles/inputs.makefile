@@ -12,8 +12,10 @@ ${INDIR}/%/incidence_ensemble.rds: R/ensemble.R ${INDIR}/incidence.rds ${OUTDIR}
 
 RAWSGTF ?= $(shell ls -t ${DATADIR}/sgtf_list_anon_*.dta | head -1)
 
+SGTFERR := ${DATADIR}/sgtf.log
+
 ${DATADIR}/sgtf_ll.rds: R/link_sgtf.R ${DATADIR}/pos_test_ll_90.RDS ${RAWSGTF}
-	$(call R)
+	$(call R) 2> $(SGTFERR)
 
 ${DATADIR}/sgt%.csv:
 	echo "you do not have the necessary raw data to make $(@F) from scratch."
