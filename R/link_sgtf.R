@@ -94,6 +94,7 @@ res.dt <- join.dt[
     is.na(specreceiveddate) | (specreceiveddate <= i.specreceiveddate),
     .(
         specreceiveddate = fcoalesce(min(specreceiveddate), i.specreceiveddate[1]),
+        sgtfdate = i.specreceiveddate[1],
         sgtf = max(sgtf), # if any sgtf == 1 in testing episode, count as sgtf == 1
         province = fcoalesce(province, i.province)[1],
         publicprivateflag = publicprivateflag[1]

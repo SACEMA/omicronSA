@@ -9,6 +9,9 @@ suppressPackageStartupMessages({
 
 dt <- readRDS(.args[1])[, infection := c("reinfection", "primary")[(inf == 1)+1] ]
 
+dt[, date := specreceiveddate ]
+dt[sgtfdate > (specreceiveddate + 30), date := sgtfdate ]
+
 res <- dcast(dt, prov + specreceiveddate + infection ~ sgtf, fun.aggregate = length)
 
 setnames(res, c("specreceiveddate", "0", "1"), c("date", "nonSGTF", "SGTF"))
