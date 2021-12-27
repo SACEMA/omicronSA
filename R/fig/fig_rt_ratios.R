@@ -43,22 +43,21 @@ qlims <- sort(c({
     tmp
 }, c(md = .5)))
 
-q.dt <- rbind(
-    res.dt[, {
-        qs <- quantile(ratio, probs = qlims, na.rm = TRUE)
-        names(qs) <- names(qlims)
-        c(as.list(qs), list(scenario = "omicron"))
-    }, by = .(region, province, date)],
-    res.dt[, {
-        qs <- quantile(ratiolow, probs = qlims, na.rm = TRUE)
-        names(qs) <- names(qlims)
-        c(as.list(qs), list(scenario = "omicronfast"))
-    }, by = .(region, province, date)]
-)
+q.dt <- melt(
+    res.dt,
+    id.vars = c("province", "date", "freq_sample", "rt_sample"),
+    measure.vars = grep("ratio", names(res.dt))
+)[, {
+    qs <- quantile(value, probs = qlims, na.rm = TRUE)
+    names(qs) <- names(qlims)
+    as.list(qs)
+}, by = .(province, date, scenario = variable) ]
 
-box.dt <- res.dt[between(date, "2021-11-14", "2021-11-20"), .(
-    ratio=exp(mean(log(ratio))), ratiolow=exp(mean(log(ratiolow)))
-), by=.(region, freq_sample, rt_sample)]
+box.dt <- melt(
+    res.dt[between(date, "2021-11-14", "2021-11-20")],
+    id.vars = c("province", "date", "freq_sample", "rt_sample"),
+    measure.vars = grep("ratio", names(res.dt))
+)[, .(value = exp(mean(log(value)))), by=.(province, freq_sample, rt_sample, scenario = variable)]
 
 p <- function(dt) ggplot(dt) +
     aes(date, color = scenario, fill = scenario) +
@@ -72,7 +71,7 @@ p <- function(dt) ggplot(dt) +
         alpha = 0.1, size = 0.25
     ) +
     geom_line(aes(y = md, linetype = "median")) +
-    coord_cartesian(ylim = c(1, NA), xlim=as.Date(c("2021-11-01", enddate))) + 
+    coord_cartesian(ylim = c(1, 6), xlim=as.Date(c("2021-11-01", enddate))) + 
     theme_minimal(base_size = 16) +
     # scale_x_date(
     #     "Sample receipt date", date_breaks = "weeks", date_minor_breaks = "days", labels = function(b) {
@@ -85,49 +84,42 @@ p <- function(dt) ggplot(dt) +
     ) +
     scale_fill_discrete(
         "Generation\nInterval", aesthetics = c("color", "fill")
-        , labels = c(omicron = "Same GI", omicronfast = "shorter\nBA.1")
+        , labels = c(
+            ratio = "same",
+            ratiolow = "shorter\nBA.1 (incubation only)",
+            ratiolower = "even shorter\nBA.1 (incubation+infectiousness)"
+        )
     ) +
     theme(
         legend.position = c(0.5, 0), legend.justification = c(0.5, 0),
         legend.direction = "horizontal"
     ) +
-    geom_half_boxplot(aes(
-            x=as.Date("2021-11-17"), y=ratio, color="omicron", fill=NULL
+    geom_boxplot(aes(
+            x=as.Date("2021-11-17"), y=value, fill=NULL
         ),
-        data = function(dt) box.dt[region %in% unique(dt$region)],
-        nudge = 0.1, width = 7, show.legend = FALSE, alpha = 0
+        data = function(dt) box.dt[province %in% unique(dt$province)],
+        position = "identity", width = 7, show.legend = FALSE, alpha = 0
     ) +
-    geom_half_boxplot(aes(
-            x=as.Date("2021-11-17"), y=ratiolow, color="omicronfast", fill=NULL
-        ),
-        data = function(dt) box.dt[region %in% unique(dt$region)],
-        nudge = 0.1, width = 7, show.legend = FALSE, alpha = 0,
-        side = "r"
-    ) +
+    # geom_half_boxplot(aes(
+    #         x=as.Date("2021-11-17"), y=ratiolow, color="omicronfast", fill=NULL
+    #     ),
+    #     data = function(dt) box.dt[province %in% unique(dt$province)],
+    #     nudge = 0.1, width = 7, show.legend = FALSE, alpha = 0,
+    #     side = "r"
+    # ) +
     geom_label(
         aes(
             x = as.Date("2021-11-21"),
-            y = ratiolow, 
-            label = round(ratiolow, 2),
+            y = value, 
+            label = round(value, 2),
             hjust = 0
         ), color="white",
         data = function(dt) box.dt[
-            region %in% unique(dt$region), .(
-                ratiolow = median(ratiolow), scenario = "omicronfast"
-            ), by=region
+            province %in% unique(dt$province), .(
+                value = median(value)
+            ), by=.(province, scenario)
         ], show.legend = F
-    ) +
-    geom_label(
-        aes(
-            x = as.Date("2021-11-13"), y=ratio,
-            label = round(ratio, 2),
-            hjust = 1
-        ), color="white",
-        data = function(dt) box.dt[
-            region %in% unique(dt$region), .(
-                ratio=median(ratio), scenario = "omicron"
-            ), by=region], show.legend = F
     )
 
-ggsave(tail(.args, 1), p(q.dt[region == "GP"]), width = 8, height = 5, dpi = 600, bg="white")
+ggsave(tail(.args, 1), p(q.dt[province == "GAUTENG"]), width = 8, height = 5, dpi = 600, bg="white")
 

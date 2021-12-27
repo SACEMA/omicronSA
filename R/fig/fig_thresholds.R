@@ -140,8 +140,12 @@ plotter2 <- function(dt, bglayer) ggplot(dt) + aes(
     ) +
     scale_linetype_manual(NULL, values = c(median="solid", `50%`="dashed", `95%`="dotted")) +
     scale_color_discrete(
-        NULL, aesthetics = c("color","fill"),
-        labels = c(transmissibility="Same Gen. Interval", transmissibilitylo="BA.1 faster")
+        "Generation\nInterval", aesthetics = c("color","fill"),
+        labels = c(
+            transmissibility="Same",
+            transmissibilitylo="shorter BA.1\n(incubation only)",
+            transmissibilitylower="shorter BA.1\n(incubation+infectiousness)"
+        )
     ) +
     theme_minimal(base_size = 18) + theme(
         panel.spacing = unit(1.5, "line")

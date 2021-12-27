@@ -63,7 +63,7 @@ p <- ggplot(plot.dt) + aes(date, linetype=model) +
     facet_grid(end.date ~ prov) +
     geom_line(aes(y=SGTF_est, color = "SGTF est")) +
     geom_line(aes(y=BA.1_est, color = "BA.1 est")) +
-    geom_point(aes(y=SGTF/total, size = total, alpha = total, color = "observation"), data = function(dt) dt[date <= end.date]) +
+    geom_sgtf_point(data = function(dt) dt[date <= end.date]) +
     theme_minimal(base_size = 14) +
     coord_cartesian(ylim=c(0.01, 0.99)) +
     scale_y_logitprop() +
