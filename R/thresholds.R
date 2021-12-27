@@ -7,8 +7,7 @@ suppressPackageStartupMessages({
 .args <- if (interactive()) c(
     file.path("analysis", "input", "timing.rds"),
     file.path("analysis", "output", .debug, "omicron_ratios.rds"),
-    file.path("analysis", "output", "ngm_ratios.rds")
-    ,
+    file.path("analysis", "output", "ngm_ratios.rds"),
     file.path("analysis", "output", .debug, "thresholds.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
@@ -18,7 +17,8 @@ omiratios.dt <- readRDS(.args[2])[
     timing, on = .(region = abbr)][
     between(date, start, start + 6)][,
     .(ratio = exp(mean(log(ratio))),
-      ratiolow = exp(mean(log(ratiolow)))
+      ratiolow = exp(mean(log(ratiolow))),
+      ratiolower = exp(mean(log(ratiolower)))
     ),
     by = .(region, freq_sample, rt_sample)
 ]
@@ -40,7 +40,7 @@ comps <- rbindlist(lapply(names(delta_imm_escape), function(ndimm) {
       .SDcols = -c("immune_escape")],
     on = .(epi_sample, sero, province)
   ][,
-    ngmratio := multiplier / i.multiplierNo
+    c("ngmratio", "ngmratioalt") := .(multiplier / i.multiplierNo, multiShort / i.multiplierNo)
   ][,
     delesc := ndimm
   ]
@@ -49,13 +49,15 @@ comps <- rbindlist(lapply(names(delta_imm_escape), function(ndimm) {
 scan.dt <- comps[omisub, on = .(province = region, epi_sample), nomatch = 0]
 
 scan.dt[,
-  c("transmissibility", "transmissibilitylo") := .(ratio / ngmratio, ratiolow / ngmratio)
+  c("transmissibility", "transmissibilitylo", "transmissibilitylower") := .(
+    ratio / ngmratio, ratiolow / ngmratio, ratiolower / ngmratioalt
+  )
 ]
 
 res <- melt(
     scan.dt,
     id.vars = c("epi_sample", "sero", "province", "immune_escape", "delesc"),
-    measure.vars = c("transmissibility", "transmissibilitylo")
+    measure.vars = c("transmissibility", "transmissibilitylo", "transmissibilitylower")
 )
 
 saveRDS(res, tail(.args, 1))

@@ -63,15 +63,15 @@ ngmR <- function(
   mixmatrix, mweights,
   fIs = 1, fIp = 1, fIa = 0.5,
   uval, yval,
-  u_multiplier = 1
+  u_multiplier = 1, durmultiplier = 1
 ) {
-  durIp <- mean_dur(dIp, 0.25)
-  durIs <- mean_dur(dIs, 0.25)
-  durIa <- mean_dur(dIa, 0.25)
+  durIp <- mean_dur(dIp, 0.25)*durmultiplier
+  durIs <- mean_dur(dIs, 0.25)*durmultiplier
+  durIa <- mean_dur(dIa, 0.25)*durmultiplier
+  
   mixing <- Reduce(`+`, mapply(function(c, m) c*m, mixmatrix, mweights, SIMPLIFY = FALSE))
   ngm = uval * u_multiplier * t(t(mixing) * (
-    yval * (fIp * durIp + fIs * durIs) + 
-      (1 - yval) * fIa * durIa))
+    yval * (fIp * durIp + fIs * durIs) +(1 - yval) * fIa * durIa))
   Re(eigen(ngm)$values[1])
 }
 
@@ -130,8 +130,15 @@ ref.dt <- ensemble.dt[, {
           mweights = cs,
           uval = u,
           yval = y))
+        multiShort <- sapply(immune_escape, function(imm) ngmR(
+          mixmatrix = cms[[province]],
+          u_multiplier = 1 - (Vescapable + Rescapable) * (1 - imm) - non_reinfectable,
+          mweights = cs,
+          uval = u,
+          yval = y, durmultiplier = 0.5
+        ))
         
-        .(immune_escape = immune_escape, multiplier = multi, multiplierNo = multiNoV)
+        .(immune_escape = immune_escape, multiplier = multi, multiplierNo = multiNoV, multiShort = multiShort)
       }, by = .(sero, province)
     ]
   },

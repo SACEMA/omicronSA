@@ -37,7 +37,7 @@ res.dt <- dcast(
   consolidated,
   region + freq_sample + rt_sample + date ~ scenario
 )[,
-  c("ratio", "ratiolow") := .(omicron / delta, omicronlow / delta)
+  c("ratio", "ratiolow", "ratiolower") := .(omicron / delta, omicronlow / delta, omicronlower / delta)
 ]
 
 saveRDS(res.dt, tail(.args, 1))
