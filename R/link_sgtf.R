@@ -4,10 +4,11 @@ suppressPackageStartupMessages({
     require(haven)
 })
 
+.debug <- c(30, 60, 90)[1]
 .args <- if (interactive()) { c(
-    file.path("refdata", "pos_test_ll_90.RDS"),
+    file.path("refdata", sprintf("pos_test_ll_%i.RDS", .debug[1])),
     file.path("refdata", "sgtf_list_anon_20211220_updated.dta"),
-    file.path("refdata", "sgtf_ll.rds")
+    file.path("refdata", sprintf("sgtf_ll_%i.rds", .debug[1]))
 ) } else commandArgs(trailingOnly = TRUE)
 
 warn <- function(ws, to = stderr()) invisible(sapply(ws, function(w) write(w, file = to)))
@@ -34,7 +35,7 @@ if (sgtf[,.N] != sgtf.clean[,.N]) {
         sprintf(
         "%i caseid_hashes out of %i records:", sgtf[is.na(sgtf), .N], sgtf[, .N]
         ),
-        sgtf[is.na(sgtf), paste(caseid_hash, collapse ="\n")]
+        sgtf[is.na(sgtf)][order(specreceiveddate), paste(caseid_hash, specreceiveddate, sep = " on ", collapse ="\n")]
     ))
 }
 
@@ -57,15 +58,13 @@ if (sgtf.clean[eval(correctingview), .N]) {
             cview[,.N]
         ),
         "The following caseid_hash will have specimen receipt date set to collection date:",
-        cview[, paste(caseid_hash, collapse ="\n")]
+        cview[, paste(caseid_hash, " : ", specreceiveddate, " => ", speccollectiondate, sep = "", collapse ="\n")]
     ))
 }
 
 sgtf.clean[
     eval(correctingview), specreceiveddate := speccollectiondate
 ]
-
-
 
 allreinf <- readRDS(.args[1])
 #' initially, only consider test events since shortly before start of SGTF testing

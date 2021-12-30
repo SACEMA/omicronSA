@@ -12,19 +12,17 @@ ${INDIR}/%/incidence_ensemble.rds: R/ensemble.R ${INDIR}/incidence.rds ${OUTDIR}
 
 RAWSGTF ?= $(shell ls -t ${DATADIR}/sgtf_list_anon_*.dta | head -1)
 
-SGTFERR := ${DATADIR}/sgtf.log
+SGTFERR = ${DATADIR}/sgtf_$(1).log
 
-${DATADIR}/sgtf_ll.rds: R/link_sgtf.R ${DATADIR}/pos_test_ll_90.RDS ${RAWSGTF}
-	$(call R) 2> $(SGTFERR)
+${DATADIR}/sgtf_ll_%.rds: R/link_sgtf.R ${DATADIR}/pos_test_ll_%.RDS ${RAWSGTF}
+	$(call R) 2> $(call SGTFERR,$*)
 
-${DATADIR}/sgt%.csv:
-	echo "you do not have the necessary raw data to make $(@F) from scratch."
-	touch $@
+.PRECIOUS: ${DATADIR}/sgtf_ll_%.rds
 
-${DATADIR}/sgtf.csv: R/sgtf_public.R ${DATADIR}/sgtf_ll.rds 
+${DATADIR}/sgtf_%.csv: R/sgtf_public.R ${DATADIR}/sgtf_ll_%.rds 
 	$(call R)
 
-${INDIR}/sgtf.rds: R/sgtf.R | ${DATADIR}/sgtf.csv
+${INDIR}/sgtf.rds: R/sgtf.R | ${DATADIR}/sgtf_30.csv
 	$(call R,$|)
 
-sgtfraw: ${INDIR}/sgtf.rds
+sgtfraw: ${INDIR}/sgtf.rds $(patsubst %,${DATADIR}/sgtf_%.csv,30 60 90)
