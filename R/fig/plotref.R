@@ -86,7 +86,7 @@ sqrtb_trans <- function(lbase=10, lstep=1) scales::trans_new(
 scale_size_samples <- gg.scale.wrapper(
 	scale_size_area,
 	name = "Samples", trans = invsqrt_trans(),
-	max_size = 10
+	max_size = 15
 )
 
 scale_alpha_samples <- gg.scale.wrapper(
