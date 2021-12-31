@@ -4,7 +4,7 @@ suppressPackageStartupMessages({
     require(haven)
 })
 
-.debug <- c(30, 60, 90)[1]
+.debug <- c(30, 60, 90)[3]
 .args <- if (interactive()) { c(
     file.path("refdata", sprintf("pos_test_ll_%i.RDS", .debug[1])),
     file.path("refdata", "sgtf_list_anon_20211220_updated.dta"),
@@ -12,6 +12,8 @@ suppressPackageStartupMessages({
 ) } else commandArgs(trailingOnly = TRUE)
 
 warn <- function(ws, to = stderr()) invisible(sapply(ws, function(w) write(w, file = to)))
+
+reinfwindow <- as.integer(gsub("^.+_(\\d+)\\.rds$", "\\1", basename(tail(.args, 1))))
 
 sgtf <- as.data.table(read_dta(.args[2]))[,
     .(
@@ -44,7 +46,7 @@ if (sgtf[,.N] != sgtf.clean[,.N]) {
 #' and are more than a week later than the collection date,
 #' set the receive date (which is used as the reference date)
 #' to the collection date
-#' 
+#'
 #' n.b. assumes there are no receipt dates or report dates that are NA
 correctingview <- expression(
     (specreceiveddate == specreportdate) &
@@ -68,7 +70,9 @@ sgtf.clean[
 
 allreinf <- readRDS(.args[1])
 #' initially, only consider test events since shortly before start of SGTF testing
-reinf <- allreinf[ date >= (sgtf.clean[, min(specreceiveddate) ]-7) ]
+reinf <- allreinf[
+    date >= (sgtf.clean[, min(specreceiveddate) ] - reinfwindow)
+][, .SD[inf == max(inf)], by=caseid_hash ]
 
 join.dt <- reinf[sgtf.clean, on=.(caseid_hash), allow.cartesian = TRUE]
 
@@ -101,7 +105,7 @@ res.dt <- join.dt[
     keyby=.(
         caseid_hash, inf
     )
-][, .SD[.N], by=caseid_hash ]
+]
 
 regionkey = c(
     EC="EASTERN CAPE",
