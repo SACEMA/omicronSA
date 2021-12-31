@@ -19,3 +19,4 @@ logs
 refdata/*.RDS
 refdata/*.dta
 refdata/*.log
+refdata/sgtf_ll*
