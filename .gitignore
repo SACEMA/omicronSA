@@ -5,8 +5,8 @@
 .DS_Store
 
 # ignore all analysis inputs / products
+analysis
 analysis/*
-!analysis/README.md
 *.png
 
 # never include local.makefile configurations

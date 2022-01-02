@@ -25,11 +25,9 @@ ${OTHERRTDIR}: R/rt_primary_vs_reinf.R ${INDIR}/incidence.rds
 
 TARDATE ?= 2021-12-06
 
-${ESTDIR}/%: R/est_rt_ratios.R ${OUTDIR}/${TARDATE}/incidence_ensemble.rds | ${ESTDIR}
-	$(call R)
-	touch $@
+# delta.json omicron.json
 
-${ESTDIR}/alt/%: R/est_rt_ratios.R ${INDIR}/alt_incidence_ensemble.rds | ${ESTDIR}
+${ESTDIR}/%: R/est_rt_ratios.R ${OUTDIR}/${TARDATE}/incidence_ensemble.rds refdata/%.json | ${ESTDIR}
 	$(call R)
 	touch $@
 
