@@ -1,19 +1,28 @@
 
 suppressPackageStartupMessages({
     require(data.table)
+    require(jsonlite)
     require(EpiNow2)
 })
 
-.debug <- c("omicron", "delta", "omicronlow", "omicronlower")[4]
+.debug <- c("omicron","delta","omicronlow","omicronlower")[2]
 .args <- if (interactive()) {
   c(
     file.path("analysis", "output", "2021-12-06", "incidence_ensemble.rds"),
-    file.path("analysis", "input", sprintf("%s.json", .debug[1]))
+    file.path("analysis", "input", sprintf("%s.json", .debug[1])),
+    "GP", "01",
     file.path("analysis", "output", "omicron_ratios", .debug[1])
   )
 } else {
   commandArgs(trailingOnly = TRUE)
 }
+
+pars <- read_json(.args[2])
+
+#' on this date, significant Omicron announcement
+#' followed by more extensive testing, likely to artificially increase case
+#' growth
+#' see: XXXXX
 
 #' from covidm parameterization
 mean_generation_interval <- 6.375559
@@ -120,21 +129,21 @@ variable <- fcase(
 
 gt <- if (
   variant_type == "omicronlow"
-) { 
-  shortgi 
+) {
+  shortgi
 } else if (
   variant_type == "omicronlower"
-) { 
+) {
   shortestgi
 } else generation_time
 
 inc <- if (
   variant_type == "omicronlow"
-) { 
-  shortinc 
+) {
+  shortinc
 } else if (
   variant_type == "omicronlower"
-) { 
+) {
   shortestinc
 } else incubation_period
 
