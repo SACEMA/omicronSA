@@ -24,12 +24,15 @@ ${OTHERRTDIR}: R/rt_primary_vs_reinf.R ${INDIR}/incidence.rds
 	touch $@
 
 TARDATE ?= 2021-12-06
+TARPROV ?= GP
+TARSAMP ?= 01
 
-# delta.json omicron.json
-
-${ESTDIR}/%: R/est_rt_ratios.R ${OUTDIR}/${TARDATE}/incidence_ensemble.rds refdata/%.json | ${ESTDIR}
+${INDIR}/delta.json ${INDIR}/omicron.json: R/baseline_GI.R | ${INDIR}
 	$(call R)
-	touch $@
+
+${ESTDIR}/%/${TARPROV}_${TARSAMP}/${TARDATE}/estimate_samples.rds: R/est_rt_ratios.R ${OUTDIR}/${TARDATE}/incidence_ensemble.rds ${INDIR}/%.json | ${ESTDIR}
+	$(call R,${TARPROV} ${TARSAMP})
+	touch $(@D)
 
 cleanratios:
 	rm -rf ${RTESTS}

@@ -81,13 +81,9 @@ gen_time <- function(meangi) {
 
 generation_time <- gen_time(mean_generation_interval)
 
-#' also bootstrapped from covidm assumptions
-incubation_period <- list(
-	mean = 0.7012403,
-	mean_sd = 0.05633224,
-	sd = 0.6135941,
-	sd_sd = 0.04874248,
-	max = 14
+incubation_period <- EpiNow2::bootstrapped_dist_fit(
+	rgamma(1000, shape = mean_latent_dur + presymp_dur/2, rate = 1),
+	max_value = 14
 )
 
 write_json(

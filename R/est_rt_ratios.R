@@ -1,18 +1,23 @@
 
 suppressPackageStartupMessages({
     require(data.table)
+    require(jsonlite)
     require(EpiNow2)
 })
 
-.debug <- c("omicron","delta","omicronlow")[1]
+.debug <- c("omicron","delta","omicronlow")[2]
 .args <- if (interactive()) {
   c(
-    file.path("analysis", "output", "2021-11-27", "incidence_ensemble.rds"),
+    file.path("analysis", "output", "2021-12-06", "incidence_ensemble.rds"),
+    file.path("analysis", "input", sprintf("%s.json", .debug[1])),
+    "GP", "01",
     file.path("analysis", "output", "omicron_ratios", .debug[1])
   )
 } else {
   commandArgs(trailingOnly = TRUE)
 }
+
+pars <- read_json(.args[2])
 
 #' on this date, significant Omicron announcement
 #' followed by more extensive testing, likely to artificially increase case
