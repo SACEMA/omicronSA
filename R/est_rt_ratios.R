@@ -4,20 +4,16 @@ suppressPackageStartupMessages({
     require(EpiNow2)
 })
 
-.debug <- c("omicron","delta","omicronlow")[1]
+.debug <- c("omicron", "delta", "omicronlow", "omicronlower")[4]
 .args <- if (interactive()) {
   c(
-    file.path("analysis", "output", "2021-11-27", "incidence_ensemble.rds"),
+    file.path("analysis", "output", "2021-12-06", "incidence_ensemble.rds"),
+    file.path("analysis", "input", sprintf("%s.json", .debug[1]))
     file.path("analysis", "output", "omicron_ratios", .debug[1])
   )
 } else {
   commandArgs(trailingOnly = TRUE)
 }
-
-#' on this date, significant Omicron announcement
-#' followed by more extensive testing, likely to artificially increase case
-#' growth
-#' see: XXXXX
 
 #' from covidm parameterization
 mean_generation_interval <- 6.375559
@@ -67,12 +63,19 @@ shortgi <- gen_time(
   exp(shortinc$mean + shortinc$sd^2 / 2)
 )
 
+shortestinc <- shorteng(0.5)
+shortestgi <- gen_time(
+  (mean_generation_interval -
+  exp(incubation_period$mean + incubation_period$sd^2 / 2))/2 +
+  exp(shortestinc$mean + shortestinc$sd^2 / 2)
+)
+
 est.ext <- 30
 
 crs <- 4
 smps <- 1e3
 
-inc.dt <- as.data.table(readRDS(.args[1]))[sample <= 50]
+inc.dt <- as.data.table(readRDS(.args[1]))[prov == "GP"][between(sample,44,50)]
 # inc.dt <- as.data.table(readRDS(.args[1]))[prov != "GP" & between(sample, 1, 38)]
 
 src.dt <- inc.dt[,
@@ -107,16 +110,33 @@ Rtcalc <- function(
     ...
 )
 
-variant_type <- match.arg(basename(tail(.args, 1)), c("omicron", "omicronlow", "delta"))
+variant_type <- match.arg(basename(tail(.args, 1)), c("omicron", "omicronlow", "delta", "omicronlower"))
 variable <- fcase(
   variant_type == "omicron", "var",
   variant_type == "omicronlow", "var",
+  variant_type == "omicronlower", "var",
   variant_type == "delta", "ref"
 )
 
-gt <- if (variant_type == "omicronlow") shortgi else generation_time
+gt <- if (
+  variant_type == "omicronlow"
+) { 
+  shortgi 
+} else if (
+  variant_type == "omicronlower"
+) { 
+  shortestgi
+} else generation_time
 
-inc <- if (variant_type == "omicronlow") shortinc else incubation_period
+inc <- if (
+  variant_type == "omicronlow"
+) { 
+  shortinc 
+} else if (
+  variant_type == "omicronlower"
+) { 
+  shortestinc
+} else incubation_period
 
 Rtcalc(
     src.dt[, .(region, date, confirm = get(variable))],
