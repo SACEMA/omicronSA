@@ -13,10 +13,9 @@
 # REFDIR & FIGFMT; can also specify in invocation, e.g. `make sometarget FIGFMT=jpg`
 -include makefiles/local.makefile
 
-include makefiles/paths.makefile
-
 default: all
-all: support inputs rt mobility susceptible thresholds figures sessioninfo
+
+include makefiles/paths.makefile
 
 # automates some setup tasks & provides convenience definitions
 # particular, provides definition of R such that:
@@ -27,7 +26,7 @@ support: dirs
 
 # details for formatting input data
 include makefiles/inputs.makefile
-inputs: ${INS} ${INDIR}/susceptibility.rds ${DATADIR}/sgtf.rds
+inputs: inputdefaults
 
 include makefiles/sgtf.makefile
 sgtf: sgtfensembling
@@ -60,3 +59,5 @@ sessioninfo:
 .PHONY: list
 list:
 	grep "^[^#[:space:]].*:" Makefile
+
+all: support inputs rt mobility susceptible thresholds figures sessioninfo
