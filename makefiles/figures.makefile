@@ -1,11 +1,15 @@
 
+# override default figure format either in local.makefile or as command line
+# argument in invocation of make, e.g. `make figs FIGFMT=jpg`
+FIGFMT ?= png
+
 RFIG := R/fig
 FIGREF := ${INDIR}/plotref.rda
 
 ${FIGREF}: ${RFIG}/plotref.R
 	$(call R)
 
-figs: $(patsubst %,${FIGDIR}/%.png,2021-12-06/omicron_ratios 2021-11-27/omicron_ratios 2021-12-06/thresholds 2021-11-27/thresholds prime_vs_reinf)
+figs: $(patsubst %,${FIGDIR}/%.${FIGFMT},2021-12-06/omicron_ratios 2021-11-27/omicron_ratios 2021-12-06/thresholds 2021-11-27/thresholds prime_vs_reinf)
 
 ${FIGDIR}/frequencies.png: ${RFIG}/fig_frequency.R $(addprefix ${INDIR}/,sssims.rds simbig.quasi.rds simbig.bin.rds) ${INDIR}/sgtf.rds
 		$(call R)

@@ -7,10 +7,19 @@
 INFILES := Rescapable.RDS Vescapable.RDS non-reinfectable.RDS \
 pos_test_ll_%.RDS prov_ts_%.RDS
 
-$(foreach cpfile,${INFILES},$(eval $(call cptar,$(cpfile))))
+$(eval $(foreach cpfile,${INFILES},$(call cptar,$(cpfile))))
 
 ${DATADIR}/sgtf_list_anon%.dta: $(wildcard ${DLDIR}/sgtf_list_anon*.dta)
 	cp ${DLDIR}/sgtf_list_anon*.dta ${DATADIR}/.
+
+# set the reference source data for SGTF analysis; defaults to most recently
+# updated file matching the below pattern in the downloads directory
+RAWSGTF ?= ${DATADIR}/$(shell cd ${DLDIR}; ls -t sgtf_list_anon_*.dta | head -1)
+
+inputdefaults: ${RAWSGTF} \
+	$(patsubst %,${DATADIR}/pos_test_ll_%.RDS,30 60 90) \
+	$(patsubst %,${DATADIR}/prov_ts_%.RDS,90) \
+	$(patsubst %,${DATADIR}/%.RDS,Rescapable Vescapable non-reinfectable)
 
 # end data transfer section ####################################################
 
@@ -18,24 +27,21 @@ ${DATADIR}/sgtf_list_anon%.dta: $(wildcard ${DLDIR}/sgtf_list_anon*.dta)
 # test line lists (raw data not generally made available), we develop SGTF
 # time series (included in this repository as csvs)
 
-# set the reference source data for SGTF analysis; defaults to most recently
-# updated file matching the below pattern in the downloads directory
-RAWSGTF ?= ${DATADIR}/$(shell cd ${DLDIR}; ls -t sgtf_list_anon_*.dta | head -1)
-# define logging locale for warnings emitted by various linking approaches
+# define logging for warnings emitted by sgtf processing
 sgtferr = ${DATADIR}/sgtf_$(1).log
 
-${DATADIR}/sgtf_ll_%.rds: R/link_sgtf.R ${DATADIR}/pos_test_ll_%.RDS ${RAWSGTF}
-	$(call R) 2> $(call sgtferr,$*)
+${DATADIR}/sgtf_list_anon.rds: R/sgtf/import.R ${RAWSGTF}
+	$(call R) 2> $(call sgtferr,import)
 
-${DATADIR}/sgtf_ll_%.rds: R/link_sgtf_%.R ${DATADIR}/pos_test_ll_90.RDS ${RAWSGTF}
-	$(call R) 2> $(call sgtferr,$*)
+${DATADIR}/sgtf_ll_%.rds: R/sgtf/link.R ${DATADIR}/sgtf_list_anon.rds ${DATADIR}/pos_test_ll_%.RDS
+	$(call R)
+
+${DATADIR}/sgtf_ll_%.rds: R/sgtf/link_%.R ${DATADIR}/sgtf_ll_90.rds
+	$(call R)
 
 .PRECIOUS: ${DATADIR}/sgtf_ll_%.rds
 
-${DATADIR}/sgtf_%.csv: R/sgtf_public.R ${DATADIR}/sgtf_ll_%.rds
-	$(call R)
-
-${DATADIR}/sgtf_%.csv: R/sgtf_public_%.R ${DATADIR}/sgtf_ll_90.rds
+${DATADIR}/sgtf_%.csv: R/sgtf/public.R ${DATADIR}/sgtf_ll_%.rds
 	$(call R)
 
 ${INDIR}/sgtf_%.rds: R/sgtf.R | ${DATADIR}/sgtf_%.csv
@@ -58,34 +64,35 @@ inputdefaults: ${INDIR}/sgtf.rds $(patsubst %,${DATADIR}/sgtf_%.csv,30 60 90 hol
 ${INDIR}/incidence_%.rds: R/incidence.R ${DATADIR}/prov_ts_%.RDS
 	$(call R)
 
-${INDIR}/incidence_%.rds: R/incidence_sub.R ${DATADIR}/prov_ts_90.RDS ${INDIR}/sgtf_ll_%.rds
-	$(call R)
+# TODO more sophisticated approach? very limited number of records affected
+${INDIR}/incidence_trim.rds ${INDIR}/incidence_hold.rds: ${INDIR}/incidence_90.rds
+	cp $< $@
 
 REFINC ?= ${INDIR}/incidence_${REFTYPE}.rds
 
 $(eval $(call cpgen,${INDIR}/incidence.rds,${REFINC}))
 
-inputdefaults: ${INDIR}/incidence.rds $(patsubst %,${INDIR}/incidence_%.rds,30 60 90 hold trim)
+inputdefaults: ${INDIR}/incidence.rds \
+	$(patsubst %,${INDIR}/incidence_%.rds,90 hold trim)
+
+# end incidence section ########################################################
 
 
-
-
-
-
-
-${INDIR}/%/incidence_ensemble.rds: R/ensemble.R ${INDIR}/incidence.rds ${OUTDIR}/sgtf/%/sims.rds
-	$(call R)
-
-
-
-
-
+# other inputs
 ${INDIR}/susceptibility.rds: R/susceptibility.R $(patsubst %,${DATADIR}/%.RDS,Rescapable Vescapable non-reinfectable)
 	$(call R)
 
 # define focal periods for estimation, by province
 ${INDIR}/timing.rds: R/timing.R | ${INDIR}
 	$(call R)
+
+${INDIR}/%/incidence_ensemble.rds: R/ensemble.R ${INDIR}/incidence.rds ${OUTDIR}/sgtf/%/sims.rds
+	$(call R)
+
+inputdefaults: ${INDIR}/susceptibility.rds ${INDIR}/timing.rds
+
+
+
 
 
 

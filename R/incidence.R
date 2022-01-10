@@ -1,14 +1,12 @@
 
 suppressPackageStartupMessages({
     require(data.table)
-    require(ggplot2)
-    require(scales)
 })
 
-.args <- if (interactive()) file.path(
-    "analysis",
-    "input",
-    c("prov_ts_90.RDS", "incidence.rds")
+.debug <- c(30, 60, 90)[3]
+.args <- if (interactive()) c(
+    file.path("refdata", sprintf("prov_ts_%i.RDS", .debug)),
+    file.path("analysis", "input", sprintf("incidence_%i.rds", .debug))
 ) else commandArgs(trailingOnly = TRUE)
 
 dt <- readRDS(.args[1])
