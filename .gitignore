@@ -19,4 +19,5 @@ logs
 refdata/*.RDS
 refdata/*.dta
 refdata/*.log
+refdata/sgtf_list_anon.rds
 refdata/sgtf_ll*
