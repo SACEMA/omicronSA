@@ -9,7 +9,8 @@ LNDIR := analysis
 INDIR  := ${LNDIR}/input
 OUTDIR := ${LNDIR}/output
 FIGDIR := ${OUTDIR}/fig
+FITDIR := ${OUTDIR}/sgtffit
 DATADIR := refdata
-MKDIRS := ${OUTDIR} ${INDIR}
+MKDIRS := ${OUTDIR} ${INDIR} ${FIGDIR} ${FITDIR}
 
 VPATH = ${INDIR}:${OUTDIR}

@@ -15,6 +15,7 @@
 
 default: all
 
+# defines the file system / path organization used in analysis
 include makefiles/paths.makefile
 
 # automates some setup tasks & provides convenience definitions
@@ -28,7 +29,7 @@ support: dirs
 include makefiles/inputs.makefile
 inputs: inputdefaults
 
-include makefiles/sgtf.makefile
+include makefiles/fitting.makefile
 sgtf: sgtfensembling
 
 # details for estimating Rt, ratios figures etc
@@ -60,4 +61,4 @@ sessioninfo:
 list:
 	grep "^[^#[:space:]].*:" Makefile
 
-all: support inputs rt mobility susceptible thresholds figures sessioninfo
+all: support inputs# rt mobility susceptible thresholds figures sessioninfo
