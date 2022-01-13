@@ -5,12 +5,22 @@ R = $(strip Rscript $^ $(1) $@)
 # one dependency XOR one order-only dependency XOR one argument
 # other uses caveat emptor
 cp = $(strip cp $< $| $(1) $@)
+# creates a symbolic link
+ln = ln -s $(abspath $(1)) $(2)
+
 
 # TODO consolidate these; 2nd is specialization of 1st
 define cpgen =
 .PRECIOUS: $(1)
 $(1): | $(2)
 	cp $$| $$@
+
+endef
+
+define lngen =
+.PRECIOUS: $(1)
+$(1): | $(2)
+	$$(call ln,$$|,$$@)
 
 endef
 
@@ -25,7 +35,7 @@ endef
 WGET = wget -c -O $@ $(1)
 
 ${LNDIR}: | ${REFDIR}
-	ln -s $| $@
+	$(call ln,$|,$@)
 
 ${MKDIRS}: | ${LNDIR}
 	mkdir -p $@
