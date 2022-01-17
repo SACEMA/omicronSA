@@ -93,10 +93,14 @@ ${INDIR}/susceptibility.rds: R/susceptibility.R $(patsubst %,${DATADIR}/%.RDS,${
 ${INDIR}/timing.rds: R/timing.R | ${INDIR}
 	$(call R)
 
+# timing references for various calculations
+${INDIR}/simDates.rda: R/simDates.R | ${INDIR}
+	$(call R)
+
 ${INDIR}/%/incidence_ensemble.rds: R/ensemble.R ${INDIR}/incidence.rds ${OUTDIR}/sgtf/%/sims.rds
 	$(call R)
 
-inputdefaults: ${INDIR}/susceptibility.rds ${INDIR}/timing.rds
+inputdefaults: ${INDIR}/susceptibility.rds ${INDIR}/timing.rds ${INDIR}/simDates.rda
 
 inputclean:
 	rm -f ${DATADIR}/pos_test_ll_*.RDS

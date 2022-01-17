@@ -1,6 +1,35 @@
 
 CENSORDATES := $(addprefix 2021-,12-06 11-27)
-SHAREDFITTINGSTUFF := TBD.so
+
+# support functions for using TMB
+TMBSO := C/logistic.so
+TMBRD := ${INDIR}/tmb.rda
+
+${TMBSO}: C/logistic.cpp C/logistic_fit.h
+	Rscript -e "TMB::compile('$<')"
+
+${TMBRD}: R/fitting/tmb_funs.R
+
+TMBSHR := ${TMBSO} ${TMBRD}
+
+fittingdefaults: ${TMBSHR}
+
+# END support functions for TMB ###########################
+
+# TODO remove this intermediate step in favor of calculating these
+# from outset
+# reformatting sgtf inputs for fitting
+
+${OUTDIR}/sgtf_%.rds: R/fitting/reagg.R ${INDIR}/sgtf_%.rds
+	$(call R)
+
+${OUTDIR}/sgtf.rds: R/fitting/reagg.R ${INDIR}/sgtf.rds
+	$(call R)
+
+fittingdefaults: ${OUTDIR}/sgtf.rds \
+	$(subst ${INDIR},${OUTDIR},$(wildcard ${INDIR}/sgtf_*.rds))
+
+# END sgtf reformatting ########################################
 
 define fitdates =
 ${OUTDIR}/sgtffit/$(1): | ${OUTDIR}/sgtffit
@@ -13,13 +42,13 @@ endef
 
 define fitviews =
 ${OUTDIR}/sgtffit/$(1)/$(2).rdata: R/fitting/TBD.R ${INDIR}/sgtf_$(2).rds \
-${SHAREDFITTINGSTUFF} | ${OUTDIR}/sgtffit/$(1)
+${TMBSO} | ${OUTDIR}/sgtffit/$(1)
 	$$(call R)
 
 endef
 
-$(info $(foreach enddate,${CENSORDATES},$(call fitdates,${enddate})))
-$(info $(foreach enddate,${CENSORDATES},$(foreach view,${THRSHLDS} ${ALTSHLDS},$(call fitviews,${enddate},${view}))))
+$(eval $(foreach enddate,${CENSORDATES},$(call fitdates,${enddate})))
+$(eval $(foreach enddate,${CENSORDATES},$(foreach view,${THRSHLDS} ${ALTSHLDS},$(call fitviews,${enddate},${view}))))
 
 # TODO write these in terms of defines, foreach over end dates
 ${OUTDIR}/sgtf/2021-12-06:
