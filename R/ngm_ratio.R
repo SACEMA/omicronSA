@@ -56,6 +56,20 @@ mean_dur <- function(dX, time_step) {
   sum(dX * ts)
 }
 
+#' @param dIp, a vector of times + probabilities for the duration of this event
+#' @param dIs, same
+#' @param dIa, same
+#' @param mixmatrix, the mixing matrices
+#' @param mwweights, their relative weights
+#' @param fIs, the relative contribution of Is
+#' @param fIp, same
+#' @param fIa, same
+#' @param uval, vector of susceptibility modifiers, by age
+#' @param yval, vector of asymptomatic fractions, by age
+#' @param u_multiplier, the multiplier to modify effective susceptibility
+#' @param durmultiplier, the relative multiplier to reduce durations of infectiousness
+#' 
+#' @return the eigenvalue of the ODE transmission / transition matrix
 ngmR <- function(
   dIp = delay_gamma(1.5, 4.0, t_max = 15, t_step = 0.25)$p,
   dIs = delay_gamma(3.5, 4.0, t_max = 15, t_step = 0.25)$p,

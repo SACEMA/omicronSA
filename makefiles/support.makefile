@@ -5,8 +5,8 @@ R = $(strip Rscript $^ $(1) $@)
 # one dependency XOR one order-only dependency XOR one argument
 # other uses caveat emptor
 cp = $(strip cp $< $| $(1) $@)
-# creates a symbolic link
-ln = ln -s $(abspath $(1)) $(2)
+# force creates a symbolic link
+ln = ln -sf $(abspath $(1)) $(2)
 
 
 # TODO consolidate these; 2nd is specialization of 1st

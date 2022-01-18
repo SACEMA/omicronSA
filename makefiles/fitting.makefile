@@ -9,6 +9,7 @@ ${TMBSO}: C/logistic.cpp C/logistic_fit.h
 	Rscript -e "TMB::compile('$<')"
 
 ${TMBRD}: R/fitting/tmb_funs.R
+	$(call R)
 
 TMBSHR := ${TMBSO} ${TMBRD}
 
@@ -26,8 +27,8 @@ ${OUTDIR}/sgtf_%.rds: R/fitting/reagg.R ${INDIR}/sgtf_%.rds
 ${OUTDIR}/sgtf.rds: R/fitting/reagg.R ${INDIR}/sgtf.rds
 	$(call R)
 
-fittingdefaults: ${OUTDIR}/sgtf.rds \
-	$(subst ${INDIR},${OUTDIR},$(wildcard ${INDIR}/sgtf_*.rds))
+#fittingdefaults: ${OUTDIR}/sgtf.rds \
+#	$(subst ${INDIR},${OUTDIR},$(wildcard ${INDIR}/sgtf_*.rds))
 
 # END sgtf reformatting ########################################
 

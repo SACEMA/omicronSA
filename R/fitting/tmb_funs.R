@@ -146,7 +146,8 @@ tmb_fit <- function(
 	debug_level = 0,
 	tmb_file = NULL,
     include_sdr = TRUE,
-    perfect_tests = FALSE
+    perfect_tests = FALSE,
+	browsing = FALSE
 ) {
 	if(!is.null(tmb_file)) {
 			TMB::compile(paste0(tmb_file, ".cpp"))

@@ -21,3 +21,7 @@ refdata/*.dta
 refdata/*.log
 refdata/sgtf_list_anon.rds
 refdata/sgtf_ll*
+
+# don't include compiled objects
+C/*.o
+C/*.so

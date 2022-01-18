@@ -30,7 +30,7 @@ include makefiles/inputs.makefile
 inputs: inputdefaults
 
 include makefiles/fitting.makefile
-sgtf: sgtfensembling
+fitting: fittingdefaults
 
 # details for estimating Rt, ratios figures etc
 include makefiles/rt.makefile
@@ -61,4 +61,4 @@ sessioninfo:
 list:
 	grep "^[^#[:space:]].*:" Makefile
 
-all: support inputs# rt mobility susceptible thresholds figures sessioninfo
+all: support inputs fitting# rt mobility susceptible thresholds figures sessioninfo
