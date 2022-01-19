@@ -149,6 +149,7 @@ tmb_fit <- function(
     perfect_tests = FALSE,
 	browsing = FALSE
 ) {
+	if (browsing) browser()
 	if(!is.null(tmb_file)) {
 			TMB::compile(paste0(tmb_file, ".cpp"))
 			dyn.load(dynlib(tmb_file))
@@ -192,7 +193,7 @@ tmb_fit <- function(
 	}
 
 	tmb_data <- c(
-		data[data_vars], list(
+		data[, data_vars, with = F], list(
 		nprov = np, debug = debug_level,
         perfect_tests = perfect_tests
 	))
@@ -331,7 +332,7 @@ get_prov_names <- function(x) { attr(x, "prov_names") }
 ##' @param fit a fitted model
 ##' @param newdata data frame for prediction (should include province, time, reinf(?)); if NULL, automatic expansion is done;
 ##' if NA, no replacement is done
-##' @param include_reinf expand prediction frame over reinfection status?
+##' @param include_reinf expand prediction frame over reinf status?
 ##' @param new parameters to substitute (only used for simulate at the moment)
 ##' @param simulate (logical)
 ##' @param perfect_tests predict/simulate with perfect specificity/sensitivity of SGTF for omicron detection?
@@ -442,7 +443,7 @@ predict.logistfit <- function(
     return(ss2)
 }
 
-## generate new data (all crosses of time/province, possibly reinfection status),
+## generate new data (all crosses of time/province, possibly reinf status),
 ## filling in holes (FIXME: call this complete_newdata() ?)
 mk_completedata <- function(fit, expand = FALSE) {
     dd0 <- get_data(fit)
