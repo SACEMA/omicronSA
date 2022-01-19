@@ -18,6 +18,6 @@ saveRDS(dt[, .(
 	time = as.integer(date-zeroDate),
 	#' n.b. warning might apply if higher-resolution date info provided
 	#' assumes day-scale resolution
-	reinfection = (infection == "refinection"),
+	reinfection = (infection == "reinfection"),
 	nonSGTF, SGTF, total, propSGTF = SGTF/total
 )], tail(.args, 1))

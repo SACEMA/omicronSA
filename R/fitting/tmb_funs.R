@@ -63,50 +63,50 @@ anonymize_names <- function(x) {
 # 		return(invisible(NULL))
 # }
 
-#' TODO unused?
+#' used like R class methods
 ## FIXME: separate coef.logistfit that sanitizes/disambiguates province-specific values?
-# coef.TMB <- function(x, random = FALSE) {
-# 		ee <- environment(x$fn)
-# 		r <- ee$last.par.best
-# 		rand <- ee$random
-# 		if (!random && length(rand)>0) {
-# 				r <- r[-rand]
-# 		}
-# 		return(r)
-# }
+coef.TMB <- function(x, random = FALSE) {
+		ee <- environment(x$fn)
+		r <- ee$last.par.best
+		rand <- ee$random
+		if (!random && length(rand)>0) {
+				r <- r[-rand]
+		}
+		return(r)
+}
 
-#' TODO unused?
-# vcov.TMB <- function(x, random = FALSE, use_numDeriv = FALSE) {
-#     cc <- coef(x, random = random)
-#     if (use_numDeriv) {
-#         if (!require("numDeriv")) stop('need numDeriv package for TMB vcov')
-#         H <- numDeriv::jacobian(func = x$gr,
-#                                 x = cc)
-#         ## fixme: robustify?
-#         V <- solve(H)
-#         nn <- names(cc)
-#         dimnames(V) <- list(nn,nn)
-#         return(V)
-#     }
-#     sdr <- get_sdr(x)
-#     if (!random) return(sdr$cov.fixed)
-#     return(solve(sdr$jointPrecision))
-# }
+#' used like R class methods
+vcov.TMB <- function(x, random = FALSE, use_numDeriv = FALSE) {
+    cc <- coef(x, random = random)
+    if (use_numDeriv) {
+        if (!require("numDeriv")) stop('need numDeriv package for TMB vcov')
+        H <- numDeriv::jacobian(func = x$gr,
+                                x = cc)
+        ## fixme: robustify?
+        V <- solve(H)
+        nn <- names(cc)
+        dimnames(V) <- list(nn,nn)
+        return(V)
+    }
+    sdr <- get_sdr(x)
+    if (!random) return(sdr$cov.fixed)
+    return(solve(sdr$jointPrecision))
+}
 
-#' TODO unused?
-# logLik.TMB <- function(x) {
-# 		## FIXME: include df? (length(coef(x)))?
-# 		## is x$fn() safe (uses last.par) or do we need last.par.best ?
-#     val <- -1*x$fn()
-#     attr(val, "df") <- length(coef(x))
-# 		return(val)
-# }
+#' used like R class methods
+logLik.TMB <- function(x) {
+		## FIXME: include df? (length(coef(x)))?
+		## is x$fn() safe (uses last.par) or do we need last.par.best ?
+    val <- -1*x$fn()
+    attr(val, "df") <- length(coef(x))
+		return(val)
+}
 
-#' TODO unused?
-# print.TMB <- function(x) {
-# 		cat("TMB model\n\nParameters:\n",x$par,"\n")
-# 		return(invisible(x))
-# }
+#' used like R class methods
+print.TMB <- function(x) {
+		cat("TMB model\n\nParameters:\n",x$par,"\n")
+		return(invisible(x))
+}
 
 ## compute mean and SD of Gaussian prior from lower/upper bounds of
 ## confidence interval
