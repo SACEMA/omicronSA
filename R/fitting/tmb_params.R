@@ -1,104 +1,65 @@
-library(TMB) ## still need it to operate on TMB objects
-library(tidyr)
-library(dplyr)
 
+#' not including `tools` here, as it should be standard-install package
+#' and is only used for one function
+suppressPackageStartupMessages({
+	stopifnot(all(sapply(c("data.table", "TMB"), require, character.only = TRUE)))
+})
+
+.debug <- c("2021-11-27", "2021-12-06")[2]
 .args <- if (interactive()) c(
-	file.path("C", "logistic.so"),
 	file.path("analysis", "input", "tmb.rda"),
-	file.path("analysis", "output", "thing.rds"),
-	file.path("analysis", "output", "thing2.rds")
+	file.path("analysis", "output", .debug, "fit.rds"),
+	file.path("analysis", "output", .debug, "ensemble.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
-library(shellpipes)
-rpcall("btfake.sg.tmb_ensemble.Rout tmb_ensemble.R btfake.sg.ltfit.tmb_fit.rds tmb_funs.rda logistic.so")
-
-
-
-fit <- rdsRead()
-loadEnvironments()
-soLoad()
+load(.args[1])
+fit <- readRDS(.args[2])
 
 nsim <- 500
-set.seed(101)
+set.seed(8675309)
 ## need covariance matrix/random values for both fixed & random effects
-pop_vals <- as.data.frame(MASS::mvrnorm(nsim
-	, mu = coef(fit, random = TRUE)
-	, Sigma = vcov(fit, random =TRUE)
-))
-
-## reconstruct deltar for each province
-## FIXME: tidy this (rowwise?)
-deltar_mat <- t(apply(pop_vals, MARGIN = 1
-	, function(x) {
-		return(exp(
-			exp(x[["logsd_logdeltar"]])*x[names(x) == "b_logdeltar"] 
-			+ x[["log_deltar"]]
-		))
-	}
-))
-colnames(deltar_mat) <- get_prov_names(fit)
-
-deltar_vals <- (deltar_mat
-	|> as.data.frame()
-	|> mutate(sample_no = 1:n())
-	|> pivot_longer(-sample_no,
-					names_to = "prov",
-					values_to = "deltar")
+pop_vals <- MASS::mvrnorm(
+	nsim,
+	mu = coef(fit, random = TRUE),
+	Sigma = vcov(fit, random =TRUE)
 )
 
-loc_vals <- (pop_vals
-	|> select(starts_with("loc"))
-	|> rename_with(stringr::str_remove, pattern = "loc\\.")
-	|> mutate(sample_no = 1:n())
-	|> pivot_longer(-sample_no,
-					names_to = "prov",
-					values_to = "loc")
+deltar_mat <- exp(
+	pop_vals[, colnames(pop_vals) == "b_logdeltar", drop = F] *
+		exp(pop_vals[, "logsd_logdeltar"]) +
+		pop_vals[, "log_deltar"]
 )
+
+colnames(deltar_mat) <- sprintf("deltar.%s", get_prov_names(fit))
+
+loc_vals <- pop_vals[, colnames(pop_vals) %like% "loc", drop = F]
 
 shape_regex <- "^log_(theta|sigma)$"
-if (sum(grepl(shape_regex,
-              colnames(pop_vals))) != 1) {
-    stop(sprintf("columns '%s' missing or non-unique",
-                 shape_regex))
-}
-beta_shape <- (pop_vals
-    |> as.data.frame()
-    |> select(ll = matches(shape_regex))
-    ## select & rename
-    |> transmute(beta_shape = exp(ll))
-    |> mutate(sample_no = 1:n())
-)
-
-all_vals <- (deltar_vals
-	|> full_join(loc_vals, by = c("prov", "sample_no"))
-	|> full_join(beta_shape, by = "sample_no")
-)
-
-if("beta_reinf" %in% names(pop_vals)){
-	reinf_mat <- t(apply(pop_vals, MARGIN = 1
-		, function(x) {
-			return(
-				exp(x[["logsd_reinf"]])*x[names(x) == "b_reinf"] 
-				+ x[["beta_reinf"]]
-			)
-		}
-	))
-	colnames(reinf_mat) <- get_prov_names(fit)
-
-	reinf_vals <- (reinf_mat
-		|> as.data.frame()
-		|> mutate(sample_no = 1:n())
-		|> pivot_longer(-sample_no
-			, names_to = "prov"
-			, values_to = "reinf"
-		)
-	)
-	all_vals <- (all_vals
-		|> full_join(reinf_vals, by = c("prov", "sample_no"))
-		|> mutate(reloc = loc - reinf/deltar)
-	)
+if (sum(grepl(shape_regex, colnames(pop_vals))) != 1) {
+	stop(sprintf("columns '%s' missing or non-unique", shape_regex))
 }
 
-summary(all_vals)
+beta_shape <- exp(pop_vals[, grepl(shape_regex, colnames(pop_vals)), drop = F])
 
-rdsSave(all_vals)
+if("beta_reinf" %in% colnames(pop_vals)){
+	reinf_mat <- 
+		pop_vals[, colnames(pop_vals) == "b_reinf", drop = F] *
+		exp(pop_vals[,"logsd_reinf"]) +
+		pop_vals[,"beta_reinf"]
+	colnames(reinf_mat) <- sprintf("reinf.%s", get_prov_names(fit))
+} else {
+	reinf_mat <- c()
+}
+
+wide.dt <- as.data.table(cbind(
+	deltar_mat, loc_vals, reinf_mat
+))[, sample := 1:.N ]
+
+long.dt <- melt(
+	wide.dt, id.vars = "sample"
+)[, c("variable", "prov") := tstrsplit(variable, split = ".", fixed = TRUE) ]
+
+byprov.dt <- dcast(long.dt, prov + sample ~ variable, value.var = "value")
+byprov.dt[, beta_shape := beta_shape, by = prov ]
+
+saveRDS(byprov.dt, tail(.args, 1))

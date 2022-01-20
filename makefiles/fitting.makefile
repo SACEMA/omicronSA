@@ -33,48 +33,26 @@ ${OUTDIR}/sgtf.rds: R/fitting/reagg.R ${INDIR}/sgtf.rds
 # END sgtf reformatting ########################################
 
 define fitdates =
-${OUTDIR}/sgtffit/$(1): | ${OUTDIR}/sgtffit
+${OUTDIR}/$(1): | ${OUTDIR}
 	mkdir -p $$@
 
-${OUTDIR}/sgtffit/$(1)/reference.rdata: ${OUTDIR}/sgtffit/$(1)/${REFTYPE}.rdata
+${OUTDIR}/$(1)/fit.rds: R/fitting/fit.R ${OUTDIR}/sgtf.rds ${TMBSHR} | ${OUTDIR}/$(1)
 	$$(call ln,$$<,$$@)
 
-endef
+${OUTDIR}/$(1)/ensemble.rds: R/fitting/ensemble.R ${TMBRD} ${OUTDIR}/$(1)/fit.rds | ${OUTDIR}/$(1)
+	$$(call ln,$$<,$$@)
 
-define fitviews =
-${OUTDIR}/sgtffit/$(1)/$(2).rdata: R/fitting/TBD.R ${INDIR}/sgtf_$(2).rds \
-${TMBSO} | ${OUTDIR}/sgtffit/$(1)
-	$$(call R)
+${OUTDIR}/$(1)/fit_%.rds: R/fitting/fit.R ${OUTDIR}/sgtf_%.rds ${TMBSHR} | ${OUTDIR}/$(1)
+	$$(call ln,$$<,$$@)
+
+${OUTDIR}/$(1)/ensemble_%.rds: R/fitting/ensemble.R ${TMBRD} ${OUTDIR}/$(1)/fit_%.rds | ${OUTDIR}/$(1)
+	$$(call ln,$$<,$$@)
+
+.PRECIOUS: ${OUTDIR}/$(1)/fit_%.rds ${OUTDIR}/$(1)/fit.rds
+
+fittingdefaults: ${OUTDIR}/$(1)/ensemble.rds $(patsubst %,${OUTDIR}/$(1)/ensemble_%.rds,${THRSHLDS} ${ALTSHLDS})
 
 endef
 
 $(eval $(foreach enddate,${CENSORDATES},$(call fitdates,${enddate})))
 $(eval $(foreach enddate,${CENSORDATES},$(foreach view,${THRSHLDS} ${ALTSHLDS},$(call fitviews,${enddate},${view}))))
-
-# TODO write these in terms of defines, foreach over end dates
-${OUTDIR}/sgtf/2021-12-06:
-	mkdir -p $@
-
-${OUTDIR}/sgtf/2021-11-27:
-	mkdir -p $@
-
-${OUTDIR}/sgtf/2021-12-06/%.rdata: R/%_fitting.R ${INDIR}/sgtf.rds R/bbmle_utils.R | ${OUTDIR}/sgtf/2021-12-06
-	$(call R)
-
-${OUTDIR}/sgtf/2021-11-27/%.rdata: R/%_fitting.R ${INDIR}/sgtf.rds R/bbmle_utils.R | ${OUTDIR}/sgtf/2021-11-27
-	$(call R)
-
-${OUTDIR}/sgtf/%/mergedfit.rds: R/sgtf_fit_consolidate.R | ${OUTDIR}/sgtf/%
-	$(call R, $|)
-
-${OUTDIR}/sgtf/%/sims.rds: R/sgtf_ensemble.R ${OUTDIR}/sgtf/%/mergedfit.rds
-	$(call R)
-
-.PRECIOUS: ${OUTDIR}/sgtf/%.rds
-
-SGTFMODELS := 00_ssbetabin 01_ssbin 02_betabin
-
-sgtffitting: $(patsubst %,${OUTDIR}/sgtf/2021-12-06/%.rdata,${SGTFMODELS}) \
-$(patsubst %,${OUTDIR}/sgtf/2021-11-27/%.rdata,${SGTFMODELS})
-
-sgtfensembling: $(patsubst %,${OUTDIR}/sgtf/2021-%/sims.rds,12-06 11-27)

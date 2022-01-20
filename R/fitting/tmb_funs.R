@@ -23,8 +23,9 @@ splitfun <- function(orig, pars) {
 ##' safely get levels *or* unique values of a vector that
 ##' may or may not be a factor
 get_names <- function(x) {
-	if (!is.null(levels(x))) return(levels(x))
-	return(unique(x))
+	return(if (is.factor(x)) {
+		levels(x)
+	} else unique(x))
 }
 
 
@@ -129,7 +130,8 @@ prior_params <- function(lwr, upr, conf = 0.95) {
 #' @param include_sdr compute sdreport and attach it to fitted object?
 tmb_fit <- function(
 	data,
-	two_stage = TRUE, reinf_effect = NULL,
+	two_stage = TRUE,
+	reinf_effect = "reinf" %in% names(data),
     betabinom_param = c("log_theta", "log_sigma"),
 	start = list(
 		log_deltar = log(0.1),
@@ -166,16 +168,19 @@ tmb_fit <- function(
 	tmb_pars_binom <- c(start, list(log_theta = NA_real_, log_sigma = NA_real_))
 	## make sure 'prov' is a factor (TMB doesn't auto-convert)
 	data$prov <- factor(data$prov)
-	has_reinf <- "reinf" %in% names(data)
-	if (is.null(reinf_effect)) {
-			reinf_effect <- has_reinf
-	}
-	if (reinf_effect && !has_reinf) {
-			stop("reinf effect specified, but reinf missing in data")
-	}
-	if (!reinf_effect && has_reinf) {
-			warning("reinf in data, but no reinf effect specified")
-	}
+	#' TODO extract this input sanitization check
+	# has_reinf <- "reinf" %in% names(data)
+	# reinf_effect <- fcoalesce
+	# if (is.null(reinf_effect)) {
+	# 		reinf_effect <- has_reinf
+	# }
+	# if (reinf_effect && !has_reinf) {
+	# 		stop("reinf effect specified, but reinf missing in data")
+	# }
+	# if (!reinf_effect && has_reinf) {
+	# 		warning("reinf in data, but no reinf effect specified")
+	# }
+	
 	np <- length(levels(data$prov))
 	
 	## TMB wants a reinf variable, even if it's ignored (i.e. non-reinf case)
