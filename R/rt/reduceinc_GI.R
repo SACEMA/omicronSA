@@ -1,21 +1,25 @@
 
-require(jsonlite)
-require(EpiNow2)
+suppressPackageStartupMessages({
+	require(jsonlite)
+	require(EpiNow2)
+})
 
-.debug <- c("omicron", "delta")[2]
-.args <- if (interactive()) file.path(
-	"analysis", "input", sprintf("%s.json", .debug[1])
+.args <- if (interactive()) c(
+	"0.5",
+	file.path("analysis", "input", "omicronlatonly.json")
 ) else commandArgs(trailingOnly = TRUE)
 
+frac <- as.numeric(.args[1])
+
 #' comes from NCEM model assumptions
-#' S or Rvarious to various Es - 1/gamma1
-mean_latent_dur <- 1/(182.50/365)
+#' S or Rvarious to various Es = 1/gamma1
+mean_latent_dur <- 1/(182.50/365)*frac
 
 #' typical durations of the various infectious routes
-#' Iam1 to R1 - 1/r1
-#' Ip1 to IsnotT or IsT - 1/gamma2
-#' IsnotT1 to R1 or D - 1/r8
-#' IsT1 to H1 or ICU1 - 1/taus
+#' Iam1 to R1 = 1/r1
+#' Ip1 to IsnotT or IsT = 1/gamma2
+#' IsnotT1 to R1 or D = 1/r8
+#' IsT1 to H1 or ICU1 = 1/taus
 
 presymp_dur <- 1/(91.25/365)
 
@@ -35,7 +39,10 @@ mean_inf_dur <- c(
 age_RRs <- c(0.5, 0.5, 1.5, 3, 4, 5, 8)
 
 #' TODO need age specific attack mixture?
-weighted.severe <- readRDS("refdata/NCEMpop.rds")[Province == "ALL"][, sum(prop*age_RRs*0.03) ]
+weighted.severe <- readRDS(
+	"refdata/NCEMpop.rds"
+)[Province == "ALL"][, sum(prop*age_RRs*0.03) ]
+#' treatment seeking proportions
 tsprop <- 0.7
 
 #' proportion in those routes

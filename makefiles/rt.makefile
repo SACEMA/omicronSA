@@ -10,20 +10,23 @@ ${INDIR}/omicronlow.json: R/modify_GI.R ${INDIR}/omicron.json
 ${INDIR}/omicronlowest.json: R/modify_GI.R ${INDIR}/omicron.json
 	$(call R)
 
+VARSCNS := delta omicron omicronlow omicronlowest
+
+ENSIN := $(addprefix ${INDIR}/,incidence.rds simDates.rda tmb.rda)
+
 define rtdates =
-${OUTDIR}/$(1)/incidence_ensemble.rds: R/rt/ensemble.R ${OUTDIR}/$(1)/ensemble.rds ${INDIR}/incidence.rds
+${OUTDIR}/$(1)/incidence_ensemble.rds: R/rt/ensemble.R ${ENSIN} ${OUTDIR}/$(1)/ensemble.rds
 	$$(call R)
 
-${ESTDIR}/delta/%/$(1)/estimate_samples.rds:
+${ESTDIR}/delta/%/$(1)/estimate_samples.rds: thing
+	echo place
+
+${OUTDIR}/$(1)/ratios.rds: R/rt/consolidate.R 
 
 rtdefaults: ${OUTDIR}/$(1)/ensemble.rds $(patsubst %,${OUTDIR}/$(1)/ensemble_%.rds,${THRSHLDS} ${ALTSHLDS})
 
 endef
 
-
-${OUTDIR}/$(1)/
-
-ESTDIR := ${OUTDIR}/omicron_ratios
 OTHERRTDIR := ${OUTDIR}/rt
 
 omiratios:
