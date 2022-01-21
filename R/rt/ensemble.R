@@ -1,7 +1,6 @@
 
 suppressPackageStartupMessages({
     require(data.table)
-    require(emdbook)
 })
 
 .debug <- c("2021-11-27", "2021-12-06")[2]
@@ -11,7 +10,10 @@ suppressPackageStartupMessages({
             "analysis", "input", "incidence.rds"
         ),
         file.path(
-            "analysis", "output", "sgtf", .debug, "fits.rds"
+            "analysis", "input", "simDates.rda"
+        ),
+        file.path(
+            "analysis", "output", .debug, "ensemble.rds"
         ),
         file.path(
             "analysis", "output", .debug, "incidence_ensemble.rds"
@@ -21,24 +23,16 @@ suppressPackageStartupMessages({
     commandArgs(trailingOnly = TRUE)
 }
 
-day0 <- as.Date("2021-09-24")
-
-regionkey = c(
-    EC="EASTERN CAPE",
-    FS="FREE STATE",
-    GP="GAUTENG",
-    KZN="KWAZULU-NATAL",
-    LP="LIMPOPO",
-    MP="MPUMALANGA",
-    NC="NORTHERN CAPE",
-    NW="NORTH WEST",
-    WC="WESTERN CAPE",
-    ALL="ALL"
-)
-
 end.date <- as.Date(basename(dirname(tail(.args, 1))))
-fits <- as.data.table(readRDS(.args[2]))
-fits[, province := regionkey[as.character(prov)] ]
+
+dt <- readRDS(.args[1])[between(date,"2021-10-01",end.date) & province != "ALL"]
+load(.args[2])
+ens.dt <- readRDS(.args[3])[, province := regionkey[as.character(prov)] ]
+dt[, time := as.numeric(date - zeroDate) ]
+
+res.dt <- ens.dt[
+    sample <= 2
+][dt, on=.(province), allow.cartesian = TRUE]
 
 baselogis <- function(
     tvec, # observation times

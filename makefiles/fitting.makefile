@@ -11,24 +11,25 @@ ${TMBSO}: C/logistic.cpp C/logistic_fit.h
 ${TMBRD}: R/fitting/tmb_funs.R
 	$(call R)
 
-TMBSHR := ${TMBSO} ${TMBRD}
+TMBSHR := ${TMBRD} ${TMBSO}
 
 fittingdefaults: ${TMBSHR}
 
 # END support functions for TMB ###########################
 
 # TODO remove this intermediate step in favor of calculating these
-# from outset
+# from outset?
 # reformatting sgtf inputs for fitting
 
-${OUTDIR}/sgtf_%.rds: R/fitting/reagg.R ${INDIR}/sgtf_%.rds
+${OUTDIR}/sgtf_%.rds: R/fitting/reagg.R ${INDIR}/sgtf_%.rds ${INDIR}/simDates.rda
 	$(call R)
 
-${OUTDIR}/sgtf.rds: R/fitting/reagg.R ${INDIR}/sgtf.rds
+${OUTDIR}/sgtf.rds: R/fitting/reagg.R ${INDIR}/sgtf.rds ${INDIR}/simDates.rda
 	$(call R)
 
-#fittingdefaults: ${OUTDIR}/sgtf.rds \
-#	$(subst ${INDIR},${OUTDIR},$(wildcard ${INDIR}/sgtf_*.rds))
+.PRECIOUS: ${OUTDIR}/sgtf_%.rds
+
+fittingdefaults: ${OUTDIR} $(patsubst %,${OUTDIR}/sgtf_%.rds,${THRSHLDS} ${ALTSHLDS})
 
 # END sgtf reformatting ########################################
 
@@ -37,16 +38,16 @@ ${OUTDIR}/$(1): | ${OUTDIR}
 	mkdir -p $$@
 
 ${OUTDIR}/$(1)/fit.rds: R/fitting/fit.R ${OUTDIR}/sgtf.rds ${TMBSHR} | ${OUTDIR}/$(1)
-	$$(call ln,$$<,$$@)
+	$$(call R)
 
 ${OUTDIR}/$(1)/ensemble.rds: R/fitting/ensemble.R ${TMBRD} ${OUTDIR}/$(1)/fit.rds | ${OUTDIR}/$(1)
-	$$(call ln,$$<,$$@)
+	$$(call R)
 
 ${OUTDIR}/$(1)/fit_%.rds: R/fitting/fit.R ${OUTDIR}/sgtf_%.rds ${TMBSHR} | ${OUTDIR}/$(1)
-	$$(call ln,$$<,$$@)
+	$$(call R)
 
 ${OUTDIR}/$(1)/ensemble_%.rds: R/fitting/ensemble.R ${TMBRD} ${OUTDIR}/$(1)/fit_%.rds | ${OUTDIR}/$(1)
-	$$(call ln,$$<,$$@)
+	$$(call R)
 
 .PRECIOUS: ${OUTDIR}/$(1)/fit_%.rds ${OUTDIR}/$(1)/fit.rds
 

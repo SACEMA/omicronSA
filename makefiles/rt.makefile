@@ -1,5 +1,29 @@
 
 ESTDIR := ${OUTDIR}/omicron_ratios
+
+${INDIR}/delta.json ${INDIR}/omicron.json: R/baseline_GI.R | ${INDIR}
+	$(call R)
+
+${INDIR}/omicronlow.json: R/modify_GI.R ${INDIR}/omicron.json
+	$(call R)
+
+${INDIR}/omicronlowest.json: R/modify_GI.R ${INDIR}/omicron.json
+	$(call R)
+
+define rtdates =
+${OUTDIR}/$(1)/incidence_ensemble.rds: R/rt/ensemble.R ${OUTDIR}/$(1)/ensemble.rds ${INDIR}/incidence.rds
+	$$(call R)
+
+${ESTDIR}/delta/%/$(1)/estimate_samples.rds:
+
+rtdefaults: ${OUTDIR}/$(1)/ensemble.rds $(patsubst %,${OUTDIR}/$(1)/ensemble_%.rds,${THRSHLDS} ${ALTSHLDS})
+
+endef
+
+
+${OUTDIR}/$(1)/
+
+ESTDIR := ${OUTDIR}/omicron_ratios
 OTHERRTDIR := ${OUTDIR}/rt
 
 omiratios:

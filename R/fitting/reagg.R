@@ -5,8 +5,10 @@ suppressPackageStartupMessages({
 
 .debug <- sprintf("sgtf%s.rds", c("","_hold","_trim","_90","_60","_30")[1])
 .args <- if (interactive()) file.path(
-	"analysis", c(
-		file.path("input", c(.debug, "simDates.rda")),
+	"analysis", c(file.path("input", c(
+			.debug,
+			"simDates.rda"
+		)),
 		file.path("output", .debug)
 )) else commandArgs(trailingOnly = TRUE)
 

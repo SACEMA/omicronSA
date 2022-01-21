@@ -292,6 +292,7 @@ tmb_fit <- function(
 ## extract original data frame from TMB object
 #' TODO remove tidyverse elements
 get_data <- function(x) {
+	# browser()
 		dd <- x$env$data
 		L <- lengths(dd)
 		dd <- (dd[L == max(L)]
@@ -423,6 +424,7 @@ predict.logistfit <- function(
             L <- lengths(newdata)
             newdata <- newdata[L == max(L)]  ## return long/time-varying parms only (not flags etc.)
             #' TODO remove tidyverse dependency
+            # browser()
             ss2 <- (newdata
                 |> tibble::as_tibble()
                 |> dplyr::mutate(
@@ -543,6 +545,8 @@ get_prov_params <- function(fit, vnm = "log_deltar",
         sqrt(diag(vcov(fit)))[[vnm]],
         rr$sd[[vec_nm]]
     )
+    #' TODO remove tidyverse dependency
+    #' browser()
     res <- (tibble::tibble(
         prov = c("overall", get_prov_names(fit)),
         value = exp(v),
