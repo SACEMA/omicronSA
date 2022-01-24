@@ -6,7 +6,7 @@ suppressPackageStartupMessages({
 
 .args <- if (interactive()) c(
 	"0.5",
-	file.path("analysis", "input", "omicronlatonly.json")
+	file.path("analysis", "input", "omicronredlat.json")
 ) else commandArgs(trailingOnly = TRUE)
 
 frac <- as.numeric(.args[1])
@@ -88,12 +88,12 @@ gen_time <- function(meangi) {
 
 generation_time <- gen_time(mean_generation_interval)
 
-incubation_period <- EpiNow2::bootstrapped_dist_fit(
+detection_delay <- EpiNow2::bootstrapped_dist_fit(
 	rgamma(1000, shape = mean_latent_dur + presymp_dur/2, rate = 1),
 	max_value = 14
 )
 
 write_json(
-	list(gi=generation_time, inc=incubation_period), tail(.args, 1),
+	list(gi=generation_time, inc=detection_delay), tail(.args, 1),
 	pretty = TRUE, auto_unbox = TRUE
 )

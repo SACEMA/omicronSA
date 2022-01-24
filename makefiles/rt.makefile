@@ -1,65 +1,76 @@
 
-ESTDIR := ${OUTDIR}/omicron_ratios
+REDFAC := 0.5
 
-${INDIR}/delta.json ${INDIR}/omicron.json: R/baseline_GI.R | ${INDIR}
+${INDIR}/delta.json: R/rt/baseline_GI.R | ${INDIR}
 	$(call R)
 
-${INDIR}/omicronlow.json: R/modify_GI.R ${INDIR}/omicron.json
-	$(call R)
+${INDIR}/omicron.json: ${INDIR}/delta.json
+	cp $< $@
 
-${INDIR}/omicronlowest.json: R/modify_GI.R ${INDIR}/omicron.json
-	$(call R)
+${INDIR}/omicronredlat.json: R/rt/reducelat_GI.R
+	$(call R,${REDFAC})
 
-VARSCNS := delta omicron omicronlow omicronlowest
+${INDIR}/omicronredinf.json: R/rt/reduceinf_GI.R
+	$(call R,${REDFAC})
+
+VARSCNS := delta omicron omicronredlat omicronredinf
+
+rtdefaults: $(patsubst %,${INDIR}/%.json,${VARSCNS})
 
 ENSIN := $(addprefix ${INDIR}/,incidence.rds simDates.rda tmb.rda)
+
+RTPAT := rt.rds
+
+define jsondep =
+${OUTDIR}/$(1)/$(2):
+	mkdir -p $$@
+
+${OUTDIR}/$(1)/$(2)/%_${RTPAT}: R/rt/estimate.R ${OUTDIR}/$(1)/incidence_ensemble.rds ${INDIR}/$(2).json | ${OUTDIR}/$(1)/$(2)
+	$$(call R,$$(subst _, ,$$*))
+
+endef
 
 define rtdates =
 ${OUTDIR}/$(1)/incidence_ensemble.rds: R/rt/ensemble.R ${ENSIN} ${OUTDIR}/$(1)/ensemble.rds
 	$$(call R)
 
-${ESTDIR}/delta/%/$(1)/estimate_samples.rds: thing
-	echo place
+$(eval $(foreach scn,${VARSCNS},$(call jsondep,$(1),${scn})))
 
-${OUTDIR}/$(1)/ratios.rds: R/rt/consolidate.R 
+${OUTDIR}/$(1)/ratios.rds: R/rt/consolidate.R $(wildcard ${ESTDIR}/$(1)/*_${RTPAT}) | ${ESTDIR}/$(1)
+	Rscript $$< $$| ${RTPAT} $$@
 
-rtdefaults: ${OUTDIR}/$(1)/ensemble.rds $(patsubst %,${OUTDIR}/$(1)/ensemble_%.rds,${THRSHLDS} ${ALTSHLDS})
+rtdefaults: ${OUTDIR}/$(1)/incidence_ensemble.rds
 
 endef
 
-OTHERRTDIR := ${OUTDIR}/rt
+$(eval $(foreach date,${CENSORDATES},$(call rtdates,${date})))
 
-omiratios:
-	${MAKE} ${OUTDIR}/2021-12-06/omicron_ratios.rds TARDATE=2021-12-06
-	${MAKE} ${OUTDIR}/2021-11-27/omicron_ratios.rds TARDATE=2021-11-27
+#OTHERRTDIR := ${OUTDIR}/rt
 
-rtstudy: ${OTHERRTDIR}
+#omiratios:
+#	${MAKE} ${OUTDIR}/2021-12-06/omicron_ratios.rds TARDATE=2021-12-06
+#	${MAKE} ${OUTDIR}/2021-11-27/omicron_ratios.rds TARDATE=2021-11-27
 
-RTESTS := $(addprefix ${ESTDIR}/,omicron omicronlow delta)
+#rtstudy: ${OTHERRTDIR}
 
-${OUTDIR}/%/omicron_ratios.rds: R/consolidate.R ${RTESTS} | ${ESTDIR}
-	mkdir -p $(@D)
-	Rscript $< $| $* $@
+#RTESTS := $(addprefix ${ESTDIR}/,omicron omicronlow delta)
 
-${ESTDIR}:
-	mkdir -p $@
+#${OUTDIR}/%/omicron_ratios.rds: R/consolidate.R ${RTESTS} | ${ESTDIR}
+#	mkdir -p $(@D)
+#	Rscript $< $| $* $@
 
-.PRECIOUS: ${ESTDIR}/%
+#${ESTDIR}:
+#	mkdir -p $@
 
-${OTHERRTDIR}: R/rt_primary_vs_reinf.R ${INDIR}/incidence.rds
-	$(call R)
-	touch $@
+#.PRECIOUS: ${ESTDIR}/%
 
-TARDATE ?= 2021-12-06
-TARPROV ?= GP
-TARSAMP ?= 01
+#${OTHERRTDIR}: R/rt_primary_vs_reinf.R ${INDIR}/incidence.rds
+#	$(call R)
+#	touch $@
 
-${INDIR}/delta.json ${INDIR}/omicron.json: R/baseline_GI.R | ${INDIR}
-	$(call R)
+#${ESTDIR}/%/${TARPROV}_${TARSAMP}/${TARDATE}/estimate_samples.rds: R/est_rt_ratios.R ${OUTDIR}/${TARDATE}/incidence_ensemble.rds ${INDIR}/%.json | ${ESTDIR}
+#	$(call R,${TARPROV} ${TARSAMP})
+#	touch $(@D)
 
-${ESTDIR}/%/${TARPROV}_${TARSAMP}/${TARDATE}/estimate_samples.rds: R/est_rt_ratios.R ${OUTDIR}/${TARDATE}/incidence_ensemble.rds ${INDIR}/%.json | ${ESTDIR}
-	$(call R,${TARPROV} ${TARSAMP})
-	touch $(@D)
-
-cleanratios:
-	rm -rf ${RTESTS}
+#cleanratios:
+#	rm -rf ${RTESTS}

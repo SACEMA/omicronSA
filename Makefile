@@ -34,7 +34,7 @@ fitting: fittingdefaults
 
 # details for estimating Rt, ratios figures etc
 include makefiles/rt.makefile
-rt: omiratios
+rt: rtdefaults
 
 # details for getting contact matrix adjustments
 include makefiles/mobility.makefile
@@ -61,4 +61,4 @@ sessioninfo:
 list:
 	grep "^[^#[:space:]].*:" Makefile
 
-all: support inputs fitting# rt mobility susceptible thresholds figures sessioninfo
+all: support inputs fitting rt# mobility susceptible thresholds figures sessioninfo

@@ -50,12 +50,13 @@ inc.dt[, var := .(dp+dr) ][, ref := tot-var ]
 
 saveRDS(inc.dt, tail(.args, 1))
 
-#' @examples 
+#' @examples
+#' inc.dt <- readRDS(tail(.args, 1))
 #' require(ggplot2)
-#' p1 <- ggplot(inc.dt) + aes(date, group = sample) + facet_wrap(~prov) +
+#' p1 <- ggplot(inc.dt[prov == "GP"]) + aes(date, group = sample) + facet_wrap(~prov) +
 #'   geom_line(aes(y=var, color="var"), alpha = 0.05) +
 #'   geom_line(aes(y=ref, color ="ref"), alpha = 0.05) +
-#'   scale_x_date(NULL) + scale_y_continuous(NULL, trans = "log2") +
+#'   scale_x_date(NULL) + scale_y_continuous(NULL, breaks = 2^c(seq(0,9,by=3), 10), trans = "log2") +
 #'   theme_minimal()
 #' ggsave("incidence_check.png", p1, width = 10, height = 7, units = "in", dpi = 600, bg = "white")
 #' p2 <- ggplot(inc.dt) + aes(date, group = sample) + facet_wrap(~prov) +

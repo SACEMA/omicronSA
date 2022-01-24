@@ -4,14 +4,16 @@ suppressPackageStartupMessages({
 	require(EpiNow2)
 })
 
-.debug <- c("omicron", "delta")[2]
-.args <- if (interactive()) file.path(
-	"analysis", "input", sprintf("%s.json", .debug[1])
+.args <- if (interactive()) c(
+	"0.5",
+	file.path("analysis", "input", "omicronredinf.json")
 ) else commandArgs(trailingOnly = TRUE)
+
+frac <- as.numeric(.args[1])
 
 #' comes from NCEM model assumptions
 #' S or Rvarious to various Es = 1/gamma1
-mean_latent_dur <- 1/(182.50/365)
+mean_latent_dur <- 1/(182.50/365)*frac
 
 #' typical durations of the various infectious routes
 #' Iam1 to R1 = 1/r1
@@ -28,7 +30,7 @@ mean_inf_dur <- c(
 	am = 1/(52.14/365),
 	untreated = presymp_dur + utreat,
 	treated = presymp_dur + treat
-)
+)*frac
 
 #' proportion severe
 #' 0.03 (for reference age) - first infections
@@ -87,7 +89,7 @@ gen_time <- function(meangi) {
 generation_time <- gen_time(mean_generation_interval)
 
 detection_delay <- EpiNow2::bootstrapped_dist_fit(
-	Filter(function(d) d <= 14, rexp(10000, 1/(mean_latent_dur + presymp_dur))),
+	rgamma(1000, shape = mean_latent_dur + presymp_dur/2, rate = 1),
 	max_value = 14
 )
 

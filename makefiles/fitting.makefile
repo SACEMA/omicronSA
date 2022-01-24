@@ -57,3 +57,7 @@ endef
 
 $(eval $(foreach enddate,${CENSORDATES},$(call fitdates,${enddate})))
 $(eval $(foreach enddate,${CENSORDATES},$(foreach view,${THRSHLDS} ${ALTSHLDS},$(call fitviews,${enddate},${view}))))
+
+fittingclean:
+	rm -f ${OUTDIR}/*/fit_*.rds ${OUTDIR}/*/fit.rds
+	rm -f ${OUTDIR}/*/ensemble_*.rds ${OUTDIR}/*/ensemble.rds
