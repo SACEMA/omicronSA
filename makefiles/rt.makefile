@@ -45,6 +45,12 @@ endef
 
 $(eval $(foreach date,${CENSORDATES},$(call rtdates,${date})))
 
+PROVS := $(shell Rscript -e "require(data.table); cat(readRDS('${INDIR}/sgtf.rds')[, unique(prov) ])")
+
+RTSAMPS ?= 20
+
+examplert: $(foreach pr,${PROVS},$(foreach scn,${VARSCNS},$(patsubst %,${OUTDIR}/2021-12-06/${scn}/${pr}_%_${RTPAT},$(call seq,01,${RTSAMPS}))))
+
 #OTHERRTDIR := ${OUTDIR}/rt
 
 #omiratios:

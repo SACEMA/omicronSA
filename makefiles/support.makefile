@@ -7,7 +7,8 @@ R = $(strip Rscript $^ $(1) $@)
 cp = $(strip cp $< $| $(1) $@)
 # force creates a symbolic link
 ln = ln -sf $(abspath $(1)) $(2)
-
+# sequence convenience function
+seq = $(shell seq -w $(1) 1 $(2))
 
 # TODO consolidate these; 2nd is specialization of 1st
 define cpgen =

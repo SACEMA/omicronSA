@@ -57,7 +57,8 @@ wide.dt <- as.data.table(cbind(
 
 long.dt <- melt(
 	wide.dt, id.vars = "sample"
-)[, c("variable", "prov") := tstrsplit(variable, split = ".", fixed = TRUE) ]
+)[, c("variable", "cprov") := tstrsplit(variable, split = ".", fixed = TRUE) ]
+long.dt[, prov := factor(cprov, levels = get_prov_names(fit), ordered = TRUE)]
 
 byprov.dt <- dcast(long.dt, prov + sample ~ variable, value.var = "value")
 byprov.dt[, beta_shape := beta_shape, by = prov ]

@@ -38,15 +38,56 @@ res.dt <- ens.dt[dt, on=.(province), allow.cartesian = TRUE][,
 	)  
 ]
 
+#' n.b. this draw scheme ensures that given the same start date each draw has
+#' the same series quantile sequence for proportion draws (though possibly longer)
+#' and then for value draws (again, possibly longer) the series of random draws
+#' is also the same for each underlying sample, so only variability due to
+#' parameter uncertainty
+res.dt[,
+	c("qbetareinf", "qbinoreinf", "qbetaprime", "qbinoprime") := {
+		smplen <- length(unique(sample))
+		serieslen <- .N/smplen
+		set.seed(8675309 + as.integer(prov))
+		qbetareinf <- runif(serieslen)
+		set.seed(8675309 + as.integer(prov)*2)
+		qbinoreinf <- runif(serieslen)
+		set.seed(8675309 + as.integer(prov)*3)
+		qbetaprime <- runif(serieslen)
+		set.seed(8675309 + as.integer(prov)*4)
+		qbinoprime <- runif(serieslen)
+		.(
+			rep(qbetareinf, smplen),
+			rep(qbinoreinf, smplen),
+			rep(qbetaprime, smplen),
+			rep(qbinoprime, smplen)
+		)
+	},
+	by = prov
+]
+
+res.dt[, c(
+	"reinfprob", "primeprob"
+) := .(
+	qbeta(qbetareinf, a.reinf, b.reinf),
+	qbeta(qbetaprime, a.pri, b.pri)
+) ]
+
 inc.dt <- res.dt[, {
-	set.seed(8675309)
-	#' use the same seed for each sample => only variation due param. est.
-	dp <- rbinom(.N, size = inf1, prob = rbeta(.N, a.pri, b.pri))
-	dr <- rbinom(.N, size = tot-inf1, prob = rbeta(.N, a.reinf, b.reinf))
-	.(prov, date, dp, dr, tot, inf1)
-}, by=sample]
+	dr <- qbinom(qbinoreinf, size = tot-inf1, prob = reinfprob)
+	dp <- qbinom(qbinoprime, size = inf1,     prob = primeprob)
+	.(prov, sample, date, dp, dr, tot, inf1)
+} ]
 
 inc.dt[, var := .(dp+dr) ][, ref := tot-var ]
+keep.dt <- inc.dt[,
+	.(keep = (sum(ref > 0) > 14) & (sum(var > 0) > 14)), by=.(prov, sample)
+][, .(keep = all(keep)), by=sample ][keep == TRUE, .(sample, newsample = 1:.N)][newsample <= 1000]
+
+save.dt <- setkey(
+	inc.dt[keep.dt, on=.(sample)][, .(prov, sample = newsample, date, dp, dr, tot, inf1, var, ref)],
+	prov, sample, date
+)
+
 
 saveRDS(inc.dt, tail(.args, 1))
 
@@ -67,3 +108,14 @@ saveRDS(inc.dt, tail(.args, 1))
 #'   scale_x_date(NULL) + scale_y_continuous(NULL, trans = "log2") +
 #'   theme_minimal()
 #' ggsave("incidence_check2.png", p2, width = 10, height = 7, units = "in", dpi = 600, bg = "white")
+#' 
+#' ggplot(melt(
+#'   ens.dt[keep.dt, on=.(sample)],
+#'   id.vars = c("prov","sample","keep"),
+#'   measure.vars = c("deltar","loc","reinf","beta_shape")
+#' )) + aes(value, fill=keep) + facet_grid(prov ~ variable, scale = "free") +
+#' geom_histogram() + scale_y_log10()
+#' 
+#' 
+#' 
+#' 
