@@ -15,7 +15,7 @@ suppressPackageStartupMessages({
 load(.args[1])
 fit <- readRDS(.args[2])
 
-nsim <- 10000
+nsim <- 1000
 set.seed(8675309)
 ## need covariance matrix/random values for both fixed & random effects
 pop_vals <- MASS::mvrnorm(

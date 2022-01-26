@@ -39,15 +39,21 @@ $(eval $(foreach scn,${VARSCNS},$(call jsondep,$(1),${scn})))
 ${OUTDIR}/$(1)/ratios.rds: R/rt/consolidate.R $(wildcard ${ESTDIR}/$(1)/*_${RTPAT}) | ${ESTDIR}/$(1)
 	Rscript $$< $$| ${RTPAT} $$@
 
-rtdefaults: ${OUTDIR}/$(1)/incidence_ensemble.rds
+#FIXME: currently runs indefinitely for 11-27 truncation date
+#rtdefaults: ${OUTDIR}/$(1)/incidence_ensemble.rds
 
 endef
 
 $(eval $(foreach date,${CENSORDATES},$(call rtdates,${date})))
 
-PROVS := $(shell Rscript -e "require(data.table); cat(readRDS('${INDIR}/sgtf.rds')[, unique(prov) ])")
+RTSAMPS ?= 50
 
-RTSAMPS ?= 20
+${INDIR}/rtslurmref.txt: R/rt/slurm.R ${INDIR}/sgtf.rds | ${OUTDIR} $(addprefix ${OUTDIR}/,)
+	$(call R,$(firstword $|) ${RTSAMPS})
+
+rtdefaults: ${INDIR}/rtslurmref.txt
+
+PROVS := $(shell Rscript -e "require(data.table, quietly = TRUE); cat(readRDS('${INDIR}/sgtf.rds')[, unique(prov) ])")
 
 examplert: $(foreach pr,${PROVS},$(foreach scn,${VARSCNS},$(patsubst %,${OUTDIR}/2021-12-06/${scn}/${pr}_%_${RTPAT},$(call seq,01,${RTSAMPS}))))
 

@@ -38,6 +38,7 @@ res.dt <- ens.dt[dt, on=.(province), allow.cartesian = TRUE][,
 	)  
 ]
 
+#' FIXME offsets to seeds should be non overlapping 
 #' n.b. this draw scheme ensures that given the same start date each draw has
 #' the same series quantile sequence for proportion draws (though possibly longer)
 #' and then for value draws (again, possibly longer) the series of random draws
@@ -68,8 +69,8 @@ res.dt[,
 res.dt[, c(
 	"reinfprob", "primeprob"
 ) := .(
-	qbeta(qbetareinf, a.reinf, b.reinf),
-	qbeta(qbetaprime, a.pri, b.pri)
+	fifelse(beta_shape <= 30, qbeta(qbetareinf, a.reinf, b.reinf), propreinf),
+	fifelse(beta_shape <= 30, qbeta(qbetaprime, a.pri, b.pri), propprime)
 ) ]
 
 inc.dt <- res.dt[, {
