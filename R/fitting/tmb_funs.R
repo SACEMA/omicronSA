@@ -7,6 +7,23 @@ rm(list = ls())
 	"analysis", "input", "tmb.rda"
 ) else commandArgs(trailingOnly = TRUE)
 
+rtStart  <- as.Date("2021-10-01")
+zeroDate <- as.Date("2021-09-01")
+
+#' TODO put in same order as factor
+regionkey = c(
+	EC="EASTERN CAPE",
+	FS="FREE STATE",
+	GP="GAUTENG",
+	KZN="KWAZULU-NATAL",
+	LP="LIMPOPO",
+	MP="MPUMALANGA",
+	NC="NORTHERN CAPE",
+	NW="NORTH WEST",
+	WC="WESTERN CAPE",
+	ALL="ALL"
+)
+
 ## split a vector by (repeated) names and assign
 ## values to elements of an existing list
 ## (i.e., update a starting parameter list with the

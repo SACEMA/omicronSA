@@ -3,13 +3,11 @@ CENSORDATES := $(addprefix 2021-,12-06 11-27)
 
 # support functions for using TMB
 TMBSO := C/logistic.so
+# note: target definition in inputs.makefile
 TMBRD := ${INDIR}/tmb.rda
 
 ${TMBSO}: C/logistic.cpp C/logistic_fit.h
 	Rscript -e "TMB::compile('$<')"
-
-${TMBRD}: R/fitting/tmb_funs.R
-	$(call R)
 
 TMBSHR := ${TMBRD} ${TMBSO}
 
@@ -21,29 +19,19 @@ fittingdefaults: ${TMBSHR}
 # from outset?
 # reformatting sgtf inputs for fitting
 
-${OUTDIR}/sgtf_%.rds: R/fitting/reagg.R ${INDIR}/sgtf_%.rds ${INDIR}/simDates.rda
-	$(call R)
-
-${OUTDIR}/sgtf.rds: R/fitting/reagg.R ${INDIR}/sgtf.rds ${INDIR}/simDates.rda
-	$(call R)
-
-.PRECIOUS: ${OUTDIR}/sgtf_%.rds
-
-fittingdefaults: ${OUTDIR} $(patsubst %,${OUTDIR}/sgtf_%.rds,${THRSHLDS} ${ALTSHLDS})
-
 # END sgtf reformatting ########################################
 
 define fitdates =
 ${OUTDIR}/$(1): | ${OUTDIR}
 	mkdir -p $$@
 
-${OUTDIR}/$(1)/fit.rds: R/fitting/fit.R ${OUTDIR}/sgtf.rds ${TMBSHR} | ${OUTDIR}/$(1)
+${OUTDIR}/$(1)/fit.rds: R/fitting/fit.R ${INDIR}/sgtf.rds ${TMBSHR} | ${OUTDIR}/$(1)
 	$$(call R)
 
 ${OUTDIR}/$(1)/ensemble.rds: R/fitting/ensemble.R ${TMBRD} ${OUTDIR}/$(1)/fit.rds | ${OUTDIR}/$(1)
 	$$(call R)
 
-${OUTDIR}/$(1)/fit_%.rds: R/fitting/fit.R ${OUTDIR}/sgtf_%.rds ${TMBSHR} | ${OUTDIR}/$(1)
+${OUTDIR}/$(1)/fit_%.rds: R/fitting/fit.R ${INDIR}/sgtf_%.rds ${TMBSHR} | ${OUTDIR}/$(1)
 	$$(call R)
 
 ${OUTDIR}/$(1)/ensemble_%.rds: R/fitting/ensemble.R ${TMBRD} ${OUTDIR}/$(1)/fit_%.rds | ${OUTDIR}/$(1)

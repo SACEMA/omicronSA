@@ -7,7 +7,7 @@ suppressPackageStartupMessages({
 
 .debug <- c("2021-11-27", "2021-12-06")[2]
 .args <- if (interactive()) c(
-	file.path("analysis", "output", "sgtf.rds"),
+	file.path("analysis", "input", "sgtf.rds"),
 	file.path("analysis", "input", "tmb.rda"),
 	file.path("C", "logistic.so"),
 	file.path("analysis", "output", .debug, "fit.rds")
@@ -23,7 +23,7 @@ dyn.load(symblib)
 fit <- tmb_fit(
 	data = dt[
 		date <= end.date, .(
-			prov, time, reinf = reinfection, omicron = SGTF, tot = total
+			prov, time, reinf, omicron, tot
 		)
 	],
 	two_stage = TRUE,

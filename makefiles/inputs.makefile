@@ -53,7 +53,7 @@ ${DATADIR}/sgtf_ll_%.rds: R/sgtf/link_%.R ${DATADIR}/sgtf_ll_${BASETHR}.rds
 ${DATADIR}/sgtf_%.csv: R/sgtf/public.R ${DATADIR}/sgtf_ll_%.rds
 	$(call R)
 
-${INDIR}/sgtf_%.rds: R/sgtf.R | ${DATADIR}/sgtf_%.csv
+${INDIR}/sgtf_%.rds: R/sgtf/prepare.R ${INDIR}/tmb.rda | ${DATADIR}/sgtf_%.csv
 	$(call R,$|)
 
 REFSGTF := ${INDIR}/sgtf_${REFTYPE}.rds
@@ -94,13 +94,13 @@ ${INDIR}/timing.rds: R/timing.R | ${INDIR}
 	$(call R)
 
 # timing references for various calculations
-${INDIR}/simDates.rda: R/simDates.R | ${INDIR}
+${INDIR}/tmb.rda: R/fitting/tmb_funs.R | ${INDIR}
 	$(call R)
 
 ${INDIR}/%/incidence_ensemble.rds: R/ensemble.R ${INDIR}/incidence.rds ${OUTDIR}/sgtf/%/sims.rds
 	$(call R)
 
-inputdefaults: ${INDIR}/susceptibility.rds ${INDIR}/timing.rds ${INDIR}/simDates.rda
+inputdefaults: ${INDIR}/susceptibility.rds ${INDIR}/timing.rds ${INDIR}/tmb.rda
 
 inputclean:
 	rm -f ${DATADIR}/pos_test_ll_*.RDS
