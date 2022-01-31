@@ -21,18 +21,13 @@ dyn.load(symblib)
 
 ## fit (using all defaults)
 fit <- tmb_fit(
-	data = dt[
+	data = dt[prov != "EC"][
 		date <= end.date, .(
 			prov, time, reinf, omicron, tot
 		)
 	],
-	two_stage = TRUE,
-	upper = list(log_theta = 20),
 	lower = NULL,
-	map = list(),  ## no fixed params
-	betabinom_param = "log_theta",
-	debug_level = 0,
-	browsing = FALSE
+	browsing = interactive()
 )
 
 dyn.unload(symblib)

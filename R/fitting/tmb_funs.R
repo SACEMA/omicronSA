@@ -39,12 +39,7 @@ splitfun <- function(orig, pars) {
 
 ##' safely get levels *or* unique values of a vector that
 ##' may or may not be a factor
-get_names <- function(x) {
-	return(if (is.factor(x)) {
-		levels(x)
-	} else unique(x))
-}
-
+get_names <- function(x) as.character(unique(x))
 
 ##' disambiguate locations
 ##' @param x named object (matrix or vector)
@@ -134,6 +129,57 @@ prior_params <- function(lwr, upr, conf = 0.95) {
 		c(mean = m, sd = s)
 }
 
+est_thresholds <- function(dt) as.data.table(dt)[,.(
+	omicron=sum(omicron), tot=sum(tot)), keyby=.(prov, time)
+][, .SD[
+		CJ(time=min(time):max(time)),
+		on=.(time),
+		.(time, omicron=nafill(omicron, fill=0), tot=nafill(tot, fill = 0))
+	],
+	keyby=prov
+][,
+  .(time, prop=frollsum(omicron, n = 7, align = "center")/frollsum(tot, n = 7, align = "center")),
+  keyby = prov
+][, .(tmid = time[which.max(prop > 0.5)]), keyby=prov]$tmid
+
+binom_pars <- function(
+	base_pars, locs,
+	b_logdeltar = 0, b_reinf = 0,
+	logsd_logdeltar = -1,
+	logsd_reinf = -1
+) c(
+	base_pars, list(
+	loc = locs,
+	b_logdeltar = rep(b_logdeltar, length(locs)),
+	b_reinf = rep(b_reinf, length(locs)),
+	logsd_logdeltar = logsd_logdeltar,
+	logsd_reinf = logsd_reinf
+))
+
+start_opts <- function(
+	betabinom_param = c("log_theta", "log_sigma"),
+	log_deltar = log(0.1),
+	lodrop = -4, logain = -7,
+	beta_reinf = 0,
+	bbpar = log(100)
+) {
+	betabinom_param <- match.arg(betabinom_param)
+	res <- list(
+		log_deltar = log_deltar,
+		lodrop = lodrop, logain = logain,
+		beta_reinf = beta_reinf
+	)
+	res[[betabinom_param]] <- bbpar
+	res
+}
+
+default_vec <- function(ref, pars, lims = NULL) {
+	vec <- pars
+	vec[] <- ref
+	for (nm in names(lims)) { vec[[nm]] <- lims[[nm]] }
+	return(vec)
+}
+
 #' @param data data frame containing (at least) columns "prov", "time",
 #' "omicron", "tot", "prop", and "reinf" (may be NA if reinf param is mapped to 0)
 #' @param two_stage (logical) fit binomial model first?
@@ -150,15 +196,11 @@ tmb_fit <- function(
 	two_stage = TRUE,
 	reinf_effect = "reinf" %in% names(data),
     betabinom_param = c("log_theta", "log_sigma"),
-	start = list(
-		log_deltar = log(0.1),
-		lodrop = -4, logain = -7,
-		beta_reinf = 0
-	),
+	start = start_opts(betabinom_param),
 	upper = list(log_theta = 20),
 	lower = list(logsd_logdeltar = -5),
 	priors = list(
-		logsd_logdeltar =	prior_params(log(0.01), log(0.3)),
+		logsd_logdeltar = prior_params(log(0.01), log(0.3)),
         logsd_reinf = prior_params(-3, 3)
 	),
     map = list(),
@@ -170,41 +212,29 @@ tmb_fit <- function(
 ) {
 	if (browsing) browser()
 	if(!is.null(tmb_file)) {
-			TMB::compile(paste0(tmb_file, ".cpp"))
-			dyn.load(dynlib(tmb_file))
+		TMB::compile(paste0(tmb_file, ".cpp"))
+		dyn.load(dynlib(tmb_file))
 	}
 
 	data_vars <- c("prov", "time", "omicron", "tot", "reinf")
 
     betabinom_param <- match.arg(betabinom_param)
-	if (!("beta_reinf" %in% names(start))) {
-		warning("please add beta_reinf to your starting parameter list (set to zero for back-compatibility)")
-		start$beta_reinf <- 0
-	}
-
+    
+    fit_vars <- c("log_deltar", "lodrop", "logain", "beta_reinf", betabinom_param)
+    
+    #' input checks
+    stopifnot(
+    	length(setdiff(fit_vars, names(start))) == 0, #' init. con must contain all keys
+    	is.data.table(data), #' use dt or operations will be fussy
+    	length(setdiff(data_vars, names(data))) == 0, #' data must have all the columns
+    	is.factor(data$prov), # province must be a factor
+    	is.logical(reinf_effect) # reinf_effect must be TRUE or FALSE
+    )
+    
 	tmb_pars_binom <- c(start, list(log_theta = NA_real_, log_sigma = NA_real_))
-	## make sure 'prov' is a factor (TMB doesn't auto-convert)
-	data$prov <- factor(data$prov)
-	#' TODO extract this input sanitization check
-	# has_reinf <- "reinf" %in% names(data)
-	# reinf_effect <- fcoalesce
-	# if (is.null(reinf_effect)) {
-	# 		reinf_effect <- has_reinf
-	# }
-	# if (reinf_effect && !has_reinf) {
-	# 		stop("reinf effect specified, but reinf missing in data")
-	# }
-	# if (!reinf_effect && has_reinf) {
-	# 		warning("reinf in data, but no reinf effect specified")
-	# }
 	
-	np <- length(levels(data$prov))
+	np <- length(unique(data$prov))
 	
-	## TMB wants a reinf variable, even if it's ignored (i.e. non-reinf case)
-	if (is.null(data[["reinf"]])) {
-			data[["reinf"]] <- 1
-	}
-
     if (!reinf_effect) {
 		## fix reinf to starting value (== 0 by default)
 		map <- c(map, list(
@@ -221,22 +251,17 @@ tmb_fit <- function(
 	))
 	
 	if (!is.null(priors)) {
-			for (nm in names(priors)) {
-					tmb_data[[paste0("prior_",nm)]] <- priors[[nm]]
-			}
+		for (nm in names(priors)) {
+				tmb_data[[paste0("prior_",nm)]] <- priors[[nm]]
+		}
 	}
-	loc_start <- mean(data$time)
-	nRE <- 1 ## FIXME: need to reuse/adapt/adjust if we have correlated REs
-	tmb_pars_binom <- c(
-		tmb_pars_binom, list(
-		loc = rep(loc_start, np),
-		b_logdeltar = rep(0, np),
-        b_reinf = rep(0, np),
-		logsd_logdeltar = -1,
-        logsd_reinf = -1
-	))
 
-	binom_args <- list(
+	loc_init <- est_thresholds(data)
+	
+	nRE <- 1 ## FIXME: need to reuse/adapt/adjust if we have correlated REs
+	tmb_pars_binom <- binom_pars(tmb_pars_binom, loc_init)
+
+	optim_args <- list(
 		data = tmb_data,
 		parameters = tmb_pars_binom,
 		random = c("b_logdeltar", "b_reinf"),
@@ -250,51 +275,39 @@ tmb_fit <- function(
 	)
 
 	if (two_stage) {
-		tmb_binom <- do.call(MakeADFun, binom_args)
+		tmb_binom <- do.call(MakeADFun, optim_args)
 		r0 <- tmb_binom$fn()
 		stopifnot(is.finite(r0))
 		## Fit!
 		## Important to use something derivative-based (optim()'s default is
 		##	Nelder-Mead, which wastes the effort spent in doing autodiff ...
 		## TMB folks seem to like nlminb() but not clear why
-		t1 <- system.time(
-				tmb_binom_opt <- with(tmb_binom, optim(par = par, fn = fn, gr = gr, method = "BFGS",
-																							 control = list(trace = 10)))
+		tmb_binom_opt <- with(
+			tmb_binom,
+			optim(
+				par = par, fn = fn, gr = gr, method = "BFGS",
+				control = list(trace = 10)
+			)
 		)
-		## 0.6 seconds
-		class(tmb_binom) <- c("TMB")
 		## FIXME: check for inner-optimization failure here, return with meaningful error
-	}
+		class(tmb_binom) <- c("TMB")
 		## update binomial args for beta-binomial case
-		betabinom_args <- binom_args
-		## don't 'map' log_theta (dispersion) any more; set starting value to 0
-    if (two_stage) betabinom_args$parameters <- splitfun(binom_args$parameters, tmb_binom_opt$par)
+		optim_args$parameters <- splitfun(optim_args$parameters, tmb_binom_opt$par)
+	}
+
+	## don't fix log_(theta|sigma) (dispersion) any more; set starting value to 0
     if (betabinom_param == "log_theta") {
-        betabinom_args$map$log_theta <- NULL
-        betabinom_args$parameters$log_theta <- 0
+    	optim_args$map$log_theta <- NULL
+    	optim_args$parameters$log_theta <- 0
     } else {
-        betabinom_args$map$log_sigma <- NULL
-        betabinom_args$parameters$log_sigma <- 0
+    	optim_args$map$log_sigma <- NULL
+    	optim_args$parameters$log_sigma <- 0
     }
-	tmb_betabinom <- do.call(MakeADFun, betabinom_args)
-	uvec <- Inf ## default: optim will replicate as necessary
-	#' TODO DRY by function extraction
-	if (!is.null(upper)) {
-			uvec <- tmb_betabinom$par
-			uvec[] <- Inf ## set all upper bounds to Inf (default/no bound)
-			for (nm in names(upper)) {
-					uvec[[nm]] <- upper[[nm]]
-			}
-	}
-	lvec <- -Inf
-	if (!is.null(lower)) {
-			lvec <- tmb_betabinom$par
-			lvec[] <- -Inf
-			for (nm in names(lower)) {
-					lvec[[nm]] <- lower[[nm]]
-			}
-	}
-		
+	
+	tmb_betabinom <- do.call(MakeADFun, optim_args)
+	uvec <- default_vec(Inf, tmb_betabinom, upper)
+	lvec <- default_vec(-Inf, tmb_betabinom, lower)
+
 	tmb_betabinom_opt <- with(
 		tmb_betabinom, optim(
 			par = par, fn = fn, gr = gr, method = "L-BFGS-B",
