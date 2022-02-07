@@ -25,7 +25,9 @@ ${DATADIR}/sgtf_list_anon%.dta: $(wildcard ${DLDIR}/sgtf_list_anon*.dta)
 # updated file matching the below pattern in the downloads directory
 RAWSGTF ?= ${DATADIR}/$(shell cd ${DLDIR}; ls -t sgtf_list_anon_*.dta | head -1)
 
-inputdefaults: ${RAWSGTF} \
+inputraw: ${RAWSGTF}
+
+inputdefaults: inputraw \
 	$(patsubst %,${DATADIR}/pos_test_ll_%.RDS,${THRSHLDS}) \
 	$(patsubst %,${DATADIR}/prov_ts_%_pub.RDS,${THRSHLDS}) \
 	$(patsubst %,${DATADIR}/%.RDS,${NCEMOUT})

@@ -21,13 +21,11 @@ dyn.load(symblib)
 
 ## fit (using all defaults)
 fit <- tmb_fit(
-	data = dt[prov != "EC"][
+	data = dt[
 		date <= end.date, .(
 			prov, time, reinf, omicron, tot
 		)
-	],
-	lower = NULL,
-	browsing = interactive()
+	]
 )
 
 dyn.unload(symblib)

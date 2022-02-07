@@ -90,43 +90,44 @@ coef.TMB <- function(x, random = FALSE) {
 
 #' used like R class methods
 vcov.TMB <- function(x, random = FALSE, use_numDeriv = FALSE) {
-    cc <- coef(x, random = random)
+    cc <- coef.TMB(x, random = random)
     if (use_numDeriv) {
         if (!require("numDeriv")) stop('need numDeriv package for TMB vcov')
-        H <- numDeriv::jacobian(func = x$gr,
-                                x = cc)
+        H <- numDeriv::jacobian(func = x$gr, x = cc)
         ## fixme: robustify?
         V <- solve(H)
         nn <- names(cc)
         dimnames(V) <- list(nn,nn)
         return(V)
+    } else {
+    	sdr <- get_sdr(x)
+    	if (!random) {
+    		return(sdr$cov.fixed)
+    	} else return(solve(sdr$jointPrecision))
     }
-    sdr <- get_sdr(x)
-    if (!random) return(sdr$cov.fixed)
-    return(solve(sdr$jointPrecision))
+    
 }
 
 #' used like R class methods
 logLik.TMB <- function(x) {
-		## FIXME: include df? (length(coef(x)))?
-		## is x$fn() safe (uses last.par) or do we need last.par.best ?
+	## is x$fn() safe (uses last.par) or do we need last.par.best ?
     val <- -1*x$fn()
     attr(val, "df") <- length(coef(x))
-		return(val)
+	return(val)
 }
 
 #' used like R class methods
 print.TMB <- function(x) {
-		cat("TMB model\n\nParameters:\n",x$par,"\n")
-		return(invisible(x))
+	cat("TMB model\n\nParameters:\n",x$par,"\n")
+	return(invisible(x))
 }
 
 ## compute mean and SD of Gaussian prior from lower/upper bounds of
 ## confidence interval
 prior_params <- function(lwr, upr, conf = 0.95) {
-		m <- (lwr + upr)/2
-		s <- (upr-m)/qnorm((1+conf)/2)
-		c(mean = m, sd = s)
+	m <- (lwr + upr)/2
+	s <- (upr-m)/qnorm((1+conf)/2)
+	c(mean = m, sd = s)
 }
 
 est_thresholds <- function(dt) as.data.table(dt)[,.(
@@ -176,7 +177,7 @@ start_opts <- function(
 default_vec <- function(ref, pars, lims = NULL) {
 	vec <- pars
 	vec[] <- ref
-	for (nm in names(lims)) { vec[[nm]] <- lims[[nm]] }
+	if (!is.null(lims)) for (nm in names(lims)) { vec[[nm]] <- lims[[nm]] }
 	return(vec)
 }
 
@@ -208,7 +209,7 @@ tmb_fit <- function(
 	tmb_file = NULL,
     include_sdr = TRUE,
     perfect_tests = FALSE,
-	browsing = FALSE
+	browsing = interactive()
 ) {
 	if (browsing) browser()
 	if(!is.null(tmb_file)) {
