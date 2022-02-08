@@ -20,6 +20,8 @@ $(eval $(foreach cpfile,${INFILES},$(call cptar,$(cpfile))))
 
 ${DATADIR}/sgtf_list_anon%.dta: $(wildcard ${DLDIR}/sgtf_list_anon*.dta)
 	cp ${DLDIR}/sgtf_list_anon*.dta ${DATADIR}/.
+	@echo "RAWSGTF ="
+	@ls -t ${DATADIR}/sgtf_list_anon_*.dta | head -1
 
 # set the reference source data for SGTF analysis; defaults to most recently
 # updated file matching the below pattern in the downloads directory
