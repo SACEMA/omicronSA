@@ -53,7 +53,7 @@ ${INDIR}/rtslurmref.txt: R/rt/slurm.R ${INDIR}/sgtf.rds | ${OUTDIR} $(addprefix 
 
 rtdefaults: ${INDIR}/rtslurmref.txt
 
-PROVS := $(shell Rscript -e "require(data.table, quietly = TRUE); cat(readRDS('${INDIR}/sgtf.rds')[, unique(prov) ])")
+PROVS := $(shell Rscript -e "require(data.table, quietly = TRUE); if (file.exists('${INDIR}/sgtf.rds')) cat(readRDS('${INDIR}/sgtf.rds')[, unique(prov) ])")
 
 examplert: $(foreach pr,${PROVS},$(foreach scn,${VARSCNS},$(patsubst %,${OUTDIR}/2021-12-06/${scn}/${pr}_%_${RTPAT},$(call seq,01,${RTSAMPS}))))
 
