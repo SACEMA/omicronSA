@@ -29,7 +29,7 @@ RAWSGTF ?= ${DATADIR}/$(shell cd ${DLDIR}; ls -t sgtf_list_anon_*.dta | head -1)
 
 inputraw: ${RAWSGTF}
 
-inputdefaults: inputraw \
+inputraw: \
 	$(patsubst %,${DATADIR}/pos_test_ll_%.RDS,${THRSHLDS}) \
 	$(patsubst %,${DATADIR}/prov_ts_%_pub.RDS,${THRSHLDS}) \
 	$(patsubst %,${DATADIR}/%.RDS,${NCEMOUT})
@@ -64,7 +64,8 @@ REFSGTF := ${INDIR}/sgtf_${REFTYPE}.rds
 
 $(eval $(call lngen,${INDIR}/sgtf.rds,${REFSGTF}))
 
-inputdefaults: ${INDIR}/sgtf.rds $(patsubst %,${DATADIR}/sgtf_%.csv,${THRSHLDS} ${ALTSHLDS}) \
+inputdefaults: inputraw ${INDIR}/sgtf.rds \
+	$(patsubst %,${DATADIR}/sgtf_%.csv,${THRSHLDS} ${ALTSHLDS}) \
 	$(patsubst %,${INDIR}/sgtf_%.rds,${THRSHLDS} ${ALTSHLDS})
 
 # end SGTF setup steps #########################################################

@@ -88,14 +88,14 @@ sgtf.singular <- sgtf.clean[
 #' for simple consolidation vs potentially splitting test outcomes
 #' into multiple episodes
 
-short.threshold <- 14
+short.threshold <- 28
 
-#' define short, multi-test episodes as all tests within 2 weeks
+#' define short, multi-test episodes as all tests short.threshold days
 short.episodes <- sgtf.clean[
     caseid_hash %in% multi.episode,
     .(span = as.integer(diff(range(date)))),
     by=caseid_hash
-][span <= short.threshold, caseid_hash]
+][span < short.threshold, caseid_hash]
 
 #' coalesce as:
 #'  - province by first in time (n.b., province.most below gives same result)
@@ -133,7 +133,7 @@ if (short.mismatch[mismatch == TRUE, .N]) {
         sgtf.clean[order(date)][
             caseid_hash %in% short.shifts,
             .(
-                res = sprintf("%s: %s", caseid_hash, paste(range(date), collapse = " => ")),
+                res = sprintf("%s: %s (%i days)", caseid_hash, paste(range(date), collapse = " => "), as.integer(diff(range(date)))),
                 shft = unique(grep("repeat", c("TF=>TP", "repeat", "TP=>TF")[diff(sgtf)+2], value = TRUE, invert = TRUE))
             ),
             by=caseid_hash
