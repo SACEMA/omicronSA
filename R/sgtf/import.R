@@ -5,10 +5,22 @@ suppressPackageStartupMessages({
 
 .args <- if (interactive()) file.path("refdata", c(
     "sgtf_list_anon_20220131.dta",
+    "neg_test_ll.rds",
     "sgtf_list_anon.rds"
 )) else commandArgs(trailingOnly = TRUE)
 
+#' convenience function to send notes to stderr
+#' make rules should redirect this to appropriate log
 warn <- function(ws, to = stderr()) invisible(sapply(ws, function(w) write(w, file = to)))
+
+#' get negative tests to potentially split multi test individuals
+neg.ref <- readRDS(.args[2])[, .(
+	caseid_hash, province, publicprivateflag = sector,
+	ct30 = FALSE, sgtf = -1,
+	specreceiveddate = as.Date(specreceiveddate),
+	specreportdate = as.Date(specreportdate),
+	speccollectiondate = as.Date(speccollectiondate)
+)]
 
 #' n.b. factor provinces here are not the reference factor levels:
 #' just used for later cleaning steps at this stage in code
@@ -54,8 +66,8 @@ if (sgtf.raw[,.N] != sgtf.clean[,.N]) {
 #'
 #' n.b. assumes there are no receipt dates or report dates that are NA
 correctingview <- expression(
-    (specreceiveddate == specreportdate) &
-    (as.numeric(specreceiveddate - speccollectiondate) > 7)
+	(specreceiveddate == specreportdate) &
+		(as.numeric(specreceiveddate - speccollectiondate) > 7)
 )
 if (sgtf.clean[eval(correctingview), .N]) {
     cview <- sgtf.clean[eval(correctingview)]
@@ -71,6 +83,10 @@ if (sgtf.clean[eval(correctingview), .N]) {
 
 sgtf.clean[,
     date := fifelse(eval(correctingview), speccollectiondate, specreceiveddate)
+]
+#' also apply shift to test- data
+neg.ref[,
+	date := fifelse(eval(correctingview), speccollectiondate, specreceiveddate)
 ]
 
 sgtf.clean[order(date), test := 1:.N, by=caseid_hash]
@@ -91,11 +107,34 @@ sgtf.singular <- sgtf.clean[
 short.threshold <- 28
 
 #' define short, multi-test episodes as all tests short.threshold days
-short.episodes <- sgtf.clean[
+all.spans <- sgtf.clean[
     caseid_hash %in% multi.episode,
-    .(span = as.integer(diff(range(date)))),
+    {
+    	spn <- range(date)
+    	ret <- as.list(spn)
+    	chg <- any(diff(sgtf) != 0)
+    	names(ret) <- c("start", "end")
+    	consensus <- unique(sgtf)
+    	c(ret, list(
+    		span=as.integer(diff(spn)),
+    		changes = chg,
+    		consensus = ifelse(length(consensus)==1,consensus,NA_integer_)
+    	))
+    },
     by=caseid_hash
-][span < short.threshold, caseid_hash]
+]
+
+short.spans <- all.spans[span < short.threshold]
+
+#' if we observe a negative intermediate test AND a change in SG* status
+short.splits <- neg.ref[
+	short.spans, on=.(caseid_hash), nomatch=0
+][(changes == TRUE) & between(date, start, end, incbounds = FALSE)]
+#' TODO: in data as-is, no short splits
+#' however, need to write code to incorporate if there were any
+#' basic gist would be to split on the negative tests, then coalesce as below
+
+short.episodes <- short.spans[, caseid_hash]
 
 #' coalesce as:
 #'  - province by first in time (n.b., province.most below gives same result)
@@ -149,11 +188,42 @@ sgtf.long <- sgtf.clean[order(date)][
     .SDcols = c("province", "sgtf", "date")
 ]
 
+long.spans <- all.spans[span >= short.threshold]
+#' n.b. for long splits, allow changes == FALSE
+long.splits <- neg.ref[
+	long.spans, on=.(caseid_hash), nomatch=0
+][between(date, start, end, incbounds = FALSE)][, .(
+	caseid_hash, province, sgtf, date,
+	delay = -1, change = NA_integer_
+)]
+
+#' fold any potentially splitting negatives into single entries
+long.neg <- rbind(sgtf.long, long.splits)[
+	order(date), if (!any(sgtf==-1)) {
+		cbind(.SD, run = NA_integer_)
+	} else {
+		#' assert: definitionally, non -1 values exist
+		#' need to trim start + end -1s: these are test-
+		#' that pre- or post-date all test+ => won't split
+		from <- which.max(delay != -1)
+		to <- .N - which.max(rev(delay) != -1) + 1
+		subSD <- .SD[from:to]
+		negs <- rle(delay)
+		run <- rep(1:length(negs$lengths), times = negs$lengths)
+		run[delay != -1] <- NA_integer_
+		cbind(.SD, run = run)
+	}, by=caseid_hash
+]
+
 #' for long episodes, look for the first episode where
 #'  - delay from most recent test+ is greater than short.threshold
 #'  - the test indication has changed
-sgtf.long.processed <- sgtf.long[,{
-	ind <- which.max((delay > short.threshold) & change != 0)
+sgtf.long.processed <- long.neg[order(date), {
+	ind <- which.max(
+		(sgtf == -1) ||
+		((delay > short.threshold) & change != 0)
+	)
+	if (any(sgtf == -1)) browser()
 	res <- data.table()
 	rem <- .SD
 	if (ind != 1) {
