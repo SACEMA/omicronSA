@@ -140,7 +140,8 @@ short.episodes <- short.spans[, caseid_hash]
 #'  - province by first in time (n.b., province.most below gives same result)
 #'  - SGTF status = any 0 == 0 (n.b. sgtf.maj below only differs on one record)
 #'  - date to earliest test date for individual
-consolidate <- function(sd.dt) sd.dt[, .(
+consolidate <- function(sd.dt) sd.dt[
+	sgtf != -1, .( #' ignore negative tests when consolidating
 	province = province[1],
 	# province.most = levels(province)[which.max(tabulate(province))],
 	sgtf = as.integer(!any(sgtf == 0)),
@@ -197,27 +198,36 @@ long.splits <- neg.ref[
 	delay = -1, change = NA_integer_
 )]
 
-#' fold any potentially splitting negatives into single entries
-long.neg <- rbind(sgtf.long, long.splits)[
-	order(date), if (!any(sgtf==-1)) {
-		cbind(.SD, run = NA_integer_)
-	} else {
-		#' assert: definitionally, non -1 values exist
-		#' need to trim start + end -1s: these are test-
-		#' that pre- or post-date all test+ => won't split
-		from <- which.max(delay != -1)
-		to <- .N - which.max(rev(delay) != -1) + 1
-		subSD <- .SD[from:to]
-		negs <- rle(delay)
-		run <- rep(1:length(negs$lengths), times = negs$lengths)
-		run[delay != -1] <- NA_integer_
-		cbind(.SD, run = run)
-	}, by=caseid_hash
-]
-
 #' for long episodes, look for the first episode where
 #'  - delay from most recent test+ is greater than short.threshold
-#'  - the test indication has changed
+#'  - the test indication has changed OR there is an intervening negative test
+partitionq <- expression((sgtf == -1) | ((delay > short.threshold) & ((change != 0) | (pre.neg == TRUE)))
+partition <- function(subSD) {
+	n <- subSD[,.N]
+	from <- 1 #' assert: only have test- between test+, never at the beginning
+	to <- if (subSD[(from+1):n, any(eval(partitionq))]) { subSD[
+		(from+1):n,
+		which.max(eval(partitionq)) - 1
+	] + from } else n
+	res <- consolidate(subSD[from:to])
+	while (to < n) {
+		#browser()
+		from <- subSD[(to+1):n, which.max(sgtf != -1)] + to
+		to <- if ((from != n) & subSD[(from+1):n, any((sgtf == -1) | ((delay > short.threshold) & change != 0))]) { subSD[
+			(from+1):n,
+			which.max(
+				(sgtf == -1) | ((delay > short.threshold) & change != 0)
+			) - 1
+		] + from } else n
+		res <- rbind(res, consolidate(subSD[from:to]))
+	}
+	res
+}
+
+sgtf.long.processed <- rbind(sgtf.long, long.splits)[
+	order(date), partition(.SD), by=caseid_hash
+]
+
 sgtf.long.processed <- long.neg[order(date), {
 	ind <- which.max(
 		(sgtf == -1) ||
