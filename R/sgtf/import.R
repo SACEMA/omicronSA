@@ -4,7 +4,6 @@ stopifnot(all(sapply(.pkgs, require, character.only = TRUE, quietly = TRUE)))
 
 .args <- if (interactive()) file.path("refdata", c(
     "sgtf_list_anon_20220131.dta",
-    "neg_test_ll.rds",
     "sgtf_list_anon.rds"
 )) else commandArgs(trailingOnly = TRUE)
 
@@ -34,21 +33,10 @@ sgtf.raw <- as.data.table(read_dta(.args[1]))[,.(
 
 unloadNamespace("haven")
 
-#' get negative tests to potentially split multi test individuals
-#' TODO? read in more complete test- data, filter to relevant tests
-neg.ref <- readRDS(.args[2])[, .(
-	caseid_hash, province,
-	sgtf = -1L,
-	specreceiveddate = as.Date(specreceiveddate),
-	specreportdate = as.Date(specreportdate),
-	speccollectiondate = as.Date(speccollectiondate)
-)]
-
 #' remove records with `is.na(sgtf)` results - these won't be usable
 #' in analysis
 sgtf.clean <- setkey(sgtf.raw[!is.na(sgtf)], province, specreceiveddate)
 
-#' TODO: more detailed notes?
 if (sgtf.raw[,.N] != sgtf.clean[,.N]) {
     #' currently, the sgtf == NA records are the only entries for these
     #' caseid_hash, but if these individuals did have conclusive results for other
@@ -86,55 +74,20 @@ if (sgtf.clean[eval(correctingview), .N]) {
         "These caseid_hash will use collection date vice receipt date:",
         cview[, paste(caseid_hash, " : ",  speccollectiondate, " vice ", specreceiveddate, sep = "", collapse ="\n")]
     ))
-    ncview <- neg.ref[eval(correctingview)]
-    warn(c(
-    	sprintf(
-    		"WARN: %i test- records have specimen receipt dates > specimen collection date + 7.",
-    		ncview[,.N]
-    	),
-    	"These caseid_hash will use collection date vice receipt date:",
-    	ncview[, paste(caseid_hash, " : ",  speccollectiondate, " vice ", specreceiveddate, sep = "", collapse ="\n")]
-    ))
 }
 
 sgtf.clean[,
     date := fifelse(eval(correctingview), speccollectiondate, specreceiveddate)
 ]
-neg.ref[,
-	date := fifelse(eval(correctingview), speccollectiondate, specreceiveddate)
-]
 
-sgtf.clean[order(date),
-	c("test", "delay") := .(
-		1:.N,
-		c(0, as.integer(diff(date)))
-	),
-	by=caseid_hash
-]
+setkey(sgtf.clean, province, caseid_hash, date)
+sgtf.clean[, test := 1:.N, by=caseid_hash]
 
+#' based on Hay et al: https://dash.harvard.edu/handle/1/37370587
+#' by inspection, all Ct trajectories fall w/in the 15 day window
+#' Anything longer this window should be considered with more
+#' nuance, but assume anything w/in is the same event
 short.threshold <- 15
-
-splitting.records <- rbind(
-	sgtf.clean, neg.ref[, c("test", "delay") := .(-1, -1), by=caseid_hash ]
-)[
-	order(date),
-	#' primarily, we want to order by date
-	#' however, resolving ties by date depends on test- vs test+
-	#' in a complex way. basically, want to minimize the number of
-	#' - vs + runs in the data, which means sometimes + comes before -
-	#' and vice versa
-	{
-		
-	},
-	delay := nafill(delay, "nocb"),
-	by=caseid_hash
-][
-	((test < 0) & (delay > short.threshold)) | ((test < -1)),
-	.SD[.N], #' taking the last entry, as that gives the number of sequential negative tests
-	by=caseid_hash
-]
-
-
 
 #' all multi-test episodes have test == 2
 multi.episode <- sgtf.clean[test == 2, caseid_hash]
@@ -145,9 +98,7 @@ sgtf.singular <- sgtf.clean[
 	.(caseid_hash, province, sgtf, date, episode = 1)
 ]
 
-?nafill
-
-#' now deal with multi-test episodes, by setting a short threshold
+#' now deal with multi-test episodes, by using short.threshold
 #' for simple consolidation vs potentially splitting test outcomes
 #' into multiple episodes
 
@@ -161,9 +112,10 @@ all.spans <- sgtf.clean[
     	names(ret) <- c("start", "end")
     	consensus <- unique(sgtf)
     	c(ret, list(
-    		span=as.integer(diff(spn)),
+    		span = as.integer(diff(spn)),
     		changes = chg,
-    		consensus = ifelse(length(consensus)==1,consensus,NA_integer_)
+    		sgtf = ifelse(length(consensus)==1, consensus, NA_integer_),
+    		tot = .N
     	))
     },
     by=caseid_hash
@@ -171,35 +123,15 @@ all.spans <- sgtf.clean[
 
 #' over a short period of time, an observed SG* status change could be due
 #' to e.g. random probe failure when near the detection threshold early or
-#' late in the infection course. The same logic applies to intermediate
-#' test- results.
-#' 
-#' for short periods only:
-#' if we observe >1 intermediate test- AND a change in SG* status
-#' then split into multiple SG* episodes
-#' 
-#' for total spans
-
-
-#' based on Hay et al: https://dash.harvard.edu/handle/1/37370587
-#' by inspection, all Ct trajectories fall w/in the 15 day window
-#' Anything longer this window should be considered with more
-#' nuance, but assume anything w/in is the same event
-
-short.spans <- all.spans[span < short.threshold]
-
-short.splits <- neg.ref[
-	short.spans, on=.(caseid_hash), nomatch=0
-][(changes == TRUE) & between(date, start, end, incbounds = FALSE)]
-short.episodes <- short.spans[, caseid_hash]
+#' late in the infection course.
+short.episodes <- all.spans[span <= short.threshold, caseid_hash]
 
 #' coalesce as:
 #'  - province by first in time (n.b., province.most below gives same result)
 #'  - SGTF status = any 0 == 0 (n.b. sgtf.maj below only differs on one record)
 #'  - date to earliest test date for individual
-consolidate <- function(sd.dt) sd.dt[
-	sgtf != -1, .( #' ignore negative tests when consolidating
-	province = province[1],
+consolidate <- function(sd.dt) sd.dt[, .(
+	province = province[which.min(date)],
 	# province.most = levels(province)[which.max(tabulate(province))],
 	sgtf = as.integer(!any(sgtf == 0)),
 	# sgtf.maj = as.integer(sum(sgtf)/.N > 0.5),
@@ -210,18 +142,12 @@ consolidate <- function(sd.dt) sd.dt[
 sgtf.short <- sgtf.clean[
 	caseid_hash %in% short.episodes,
 	consolidate(.SD),
-	by=caseid_hash
+	by = caseid_hash
 ][, episode := 1 ]
 
-#' warn regarding coalescing that does anything other than consensus SGTF
-short.mismatch <- sgtf.clean[
-    caseid_hash %in% short.episodes,
-    .(mismatch = any(diff(sgtf) != 0)),
-    by=caseid_hash
-]
-
-if (short.mismatch[mismatch == TRUE, .N]) {
-    short.shifts <- short.mismatch[mismatch == TRUE, caseid_hash]
+#' however, log where consolidation includes changing SG* status
+if (all.spans[caseid_hash %in% short.episodes][changes == TRUE, .N]) {
+    short.shifts <- all.spans[caseid_hash %in% short.episodes][changes == TRUE, caseid_hash]
     warn(c(
         sprintf(
             "WARN: %i caseid_hash have all tests w/in %i days & show SGTF shifts:",
@@ -239,135 +165,100 @@ if (short.mismatch[mismatch == TRUE, .N]) {
 }
 
 long.episodes <- setdiff(multi.episode, short.episodes)
-sgtf.long <- sgtf.clean[order(date)][
+
+#' want:
+#'  using a rolling reference point, consolidate into short.threshold episodes
+#'  i.e. everything within first short.threshold days of first test,
+#'  consolidate with first test, then go to next test outside short.threshold of first test,
+#'  consolidate with that test, repeat
+#'  
+#'  this function takes an (ordered) vector of absolute delays from an initial reference time
+#'  and converts them into relative delays against time points that are greater than
+#'  threshold time away from previous reference
+#'  0 values correspond to the new reference time points
+rel.delays <- function(
+	abs.delays, threshold = short.threshold
+) return(abs.delays - Reduce(function(last.ref.delay, next.abs.delay) ifelse(
+	next.abs.delay - last.ref.delay <= short.threshold,
+	last.ref.delay,
+	next.abs.delay
+), abs.delays[-1], 0, accumulate = TRUE))
+
+sgtf.long.ref <- sgtf.clean[order(date)][
     caseid_hash %in% long.episodes,
-    cbind(.SD, delay = c(0, as.integer(diff(date))), change = c(0, diff(sgtf))),
+    cbind(.SD, delay = rel.delays(as.integer(date - min(date)))),
     by = caseid_hash,
-    .SDcols = c("province", "sgtf", "date")
+    .SDcols = c("province", "sgtf", "date", "test")
 ]
 
-long.spans <- all.spans[span >= short.threshold]
-#' n.b. for long splits, allow changes == FALSE
-long.splits <- neg.ref[
-	long.spans, on=.(caseid_hash), nomatch=0
-][between(date, start, end, incbounds = FALSE)][, .(
-	caseid_hash, province, sgtf, date,
-	delay = -1, change = NA_integer_
-)]
+sgtf.long.ref[delay == 0, episode := 1:.N, by=caseid_hash]
+sgtf.long.ref[, episode := nafill(episode, "locf"), by=caseid_hash]
+sgtf.long.reduced <- sgtf.long.ref[, consolidate(.SD), by=.(caseid_hash, episode)]
 
-#' for long episodes, look for the first episode where
-#'  - delay from most recent test+ is greater than short.threshold
-#'  - the test indication has changed OR there is an intervening negative test
-partitionq <- expression((sgtf == -1) | ((delay > short.threshold) & ((change != 0) | (pre.neg == TRUE)))
-partition <- function(subSD) {
-	n <- subSD[,.N]
-	from <- 1 #' assert: only have test- between test+, never at the beginning
-	to <- if (subSD[(from+1):n, any(eval(partitionq))]) { subSD[
-		(from+1):n,
-		which.max(eval(partitionq)) - 1
-	] + from } else n
-	res <- consolidate(subSD[from:to])
-	while (to < n) {
-		#browser()
-		from <- subSD[(to+1):n, which.max(sgtf != -1)] + to
-		to <- if ((from != n) & subSD[(from+1):n, any((sgtf == -1) | ((delay > short.threshold) & change != 0))]) { subSD[
-			(from+1):n,
-			which.max(
-				(sgtf == -1) | ((delay > short.threshold) & change != 0)
-			) - 1
-		] + from } else n
-		res <- rbind(res, consolidate(subSD[from:to]))
-	}
-	res
-}
+long.threshold <- 90 #' definitionally distinct results
+sgtf.long.reduced[, c("change", "delay") := .(c(1L, diff(sgtf)), as.integer(date - min(date))), by=caseid_hash]
 
-sgtf.long.processed <- rbind(sgtf.long, long.splits)[
-	order(date), partition(.SD), by=caseid_hash
+sgtf.long <- sgtf.long.reduced[
+	(change != 0) | (delay > long.threshold),
+	.(province, sgtf, date, episode = 1:.N),
+	by=caseid_hash
 ]
 
-sgtf.long.processed <- long.neg[order(date), {
-	ind <- which.max(
-		(sgtf == -1) ||
-		((delay > short.threshold) & change != 0)
-	)
-	if (any(sgtf == -1)) browser()
-	res <- data.table()
-	rem <- .SD
-	if (ind != 1) {
-		while (ind != 1) {
-			res <- rbind(res, consolidate(rem[ind - 1]))
-			rem <- rem[-(1:(ind-1))]
-			ind <- rem[,which.max((delay > short.threshold) & change != 0)]
-		}
-		rbind(res, consolidate(rem))
-	} else consolidate(rem)
-}, by = caseid_hash]
-
-change.ids <- sgtf.long.processed[,.N,by=caseid_hash][N!=1, caseid_hash]
-non.changes <- setdiff(long.episodes, change.ids)
-
-if (sgtf.long[caseid_hash %in% change.ids, .N]) {
-	# TODO stderr output on swaps
-	warn(c(
-		sprintf(
-			"WARN: %i caseid_hash have tests separated by >%i days with SGTF shifts:",
-			length(change.ids), short.threshold
-		),
-		sgtf.long[order(date)][
-			caseid_hash %in% change.ids,
-			.(
-				span = paste(date, collapse = "=>"),
-				srs = paste(sgtf, collapse = "")
-			),
-			by=caseid_hash
-		][, paste(sprintf("%s: %s == %s", caseid_hash, span, srs), collapse = "\n") ],
-		"Consolidated as:",
-		sgtf.long.processed[caseid_hash %in% change.ids,
-							.(
-								span = paste(date, collapse = "=>"),
-								srs = paste(sgtf, collapse = "")
-							),
-							by=caseid_hash
-		][, paste(sprintf("%s: %s == %s", caseid_hash, span, srs), collapse = "\n") ]
-	))
-}
-
-if (sgtf.long[caseid_hash %in% non.changes, .N]) {
-	warn(c(
-		sprintf(
-			"WARN: %i caseid_hash have tests separated by >%i consolidated into single episodes:",
-			length(non.changes), short.threshold
-		),
-		sgtf.long[order(date)][
-			caseid_hash %in% non.changes,
-			.(
-				span = paste(date, collapse = "=>"),
-				srs = paste(sgtf, collapse = "")
-			),
-			by=caseid_hash
-		][, paste(sprintf("%s: %s == %s", caseid_hash, span, srs), collapse = "\n") ],
-		"Consolidated as:",
-		sgtf.long.processed[caseid_hash %in% non.changes,
-							.(
-								span = paste(date, collapse = "=>"),
-								srs = paste(sgtf, collapse = "")
-							),
-							by=caseid_hash
-		][, paste(sprintf("%s: %s == %s", caseid_hash, span, srs), collapse = "\n") ]
-	))
-}
+#' TODO notify how long episodes consolidated
+# if (sgtf.long[episode, .N]) {
+# 	# TODO stderr output on swaps
+# 	warn(c(
+# 		sprintf(
+# 			"WARN: %i caseid_hash have tests separated by >%i days with SGTF shifts:",
+# 			length(change.ids), short.threshold
+# 		),
+# 		sgtf.long[order(date)][
+# 			caseid_hash %in% change.ids,
+# 			.(
+# 				span = paste(date, collapse = "=>"),
+# 				srs = paste(sgtf, collapse = "")
+# 			),
+# 			by=caseid_hash
+# 		][, paste(sprintf("%s: %s == %s", caseid_hash, span, srs), collapse = "\n") ],
+# 		"Consolidated as:",
+# 		sgtf.long.processed[caseid_hash %in% change.ids,
+# 							.(
+# 								span = paste(date, collapse = "=>"),
+# 								srs = paste(sgtf, collapse = "")
+# 							),
+# 							by=caseid_hash
+# 		][, paste(sprintf("%s: %s == %s", caseid_hash, span, srs), collapse = "\n") ]
+# 	))
+# }
+# if (sgtf.long[caseid_hash %in% non.changes, .N]) {
+# 	warn(c(
+# 		sprintf(
+# 			"WARN: %i caseid_hash have tests separated by >%i consolidated into single episodes:",
+# 			length(non.changes), short.threshold
+# 		),
+# 		sgtf.long[order(date)][
+# 			caseid_hash %in% non.changes,
+# 			.(
+# 				span = paste(date, collapse = "=>"),
+# 				srs = paste(sgtf, collapse = "")
+# 			),
+# 			by=caseid_hash
+# 		][, paste(sprintf("%s: %s == %s", caseid_hash, span, srs), collapse = "\n") ],
+# 		"Consolidated as:",
+# 		sgtf.long.processed[caseid_hash %in% non.changes,
+# 							.(
+# 								span = paste(date, collapse = "=>"),
+# 								srs = paste(sgtf, collapse = "")
+# 							),
+# 							by=caseid_hash
+# 		][, paste(sprintf("%s: %s == %s", caseid_hash, span, srs), collapse = "\n") ]
+# 	))
+# }
 
 sgtf.all <- setkey(rbind(
 	sgtf.singular,
 	sgtf.short,
-	sgtf.long.processed[order(date), episode := 1:.N, by=caseid_hash]
+	sgtf.long[order(date), episode := 1:.N, by=caseid_hash]
 ), province, date, caseid_hash)
 
-checkneg <- setnames(sgtf.clean[caseid_hash %in% multi.episode][
-	order(date),
-	as.list(range(date)),
-	by=caseid_hash
-], c("V1", "V2"), c("first", "last"))
-
 saveRDS(sgtf.all, tail(.args, 1))
-saveRDS(checkneg, gsub("\\.", "_checkneg.",tail(.args, 1)))
