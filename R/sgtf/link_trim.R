@@ -8,6 +8,6 @@ suppressPackageStartupMessages({
     file.path("refdata", "sgtf_ll_trim.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
-res.dt <- readRDS(.args[1])[sgtfdate < (specreceiveddate + 30)]
+res.dt <- readRDS(.args[1])[sgtfdate < (date + 30)]
 
 saveRDS(res.dt, tail(.args, 1))

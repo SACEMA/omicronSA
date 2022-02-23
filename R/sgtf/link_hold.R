@@ -9,7 +9,7 @@ suppressPackageStartupMessages({
 ) else commandArgs(trailingOnly = TRUE)
 
 res.dt <- readRDS(.args[1])[,
-	specreceiveddate := fifelse(sgtfdate < (specreceiveddate + 30), specreceiveddate, sgtfdate)
+	date := fifelse(sgtfdate < (date + 30), date, sgtfdate)
 ]
 
 saveRDS(res.dt, tail(.args, 1))

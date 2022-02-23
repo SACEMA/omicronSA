@@ -195,70 +195,30 @@ sgtf.long.ref[delay == 0, episode := 1:.N, by=caseid_hash]
 sgtf.long.ref[, episode := nafill(episode, "locf"), by=caseid_hash]
 sgtf.long.reduced <- sgtf.long.ref[, consolidate(.SD), by=.(caseid_hash, episode)]
 
-long.threshold <- 90 #' definitionally distinct results
-sgtf.long.reduced[, c("change", "delay") := .(c(1L, diff(sgtf)), as.integer(date - min(date))), by=caseid_hash]
+long.thresholds <- as.integer(c(30, 60, 90)) #' definitionally distinct results
+sgtf.long.reduced[, c(
+	"change", "delay", "cdelay"
+) := .(
+	c(1L, diff(sgtf)),
+	c(0L, as.integer(diff(date))),
+	as.integer(date - min(date))
+), by=caseid_hash]
 
-sgtf.long <- sgtf.long.reduced[
-	(change != 0) | (delay > long.threshold),
-	.(province, sgtf, date, episode = 1:.N),
-	by=caseid_hash
-]
-
-#' TODO notify how long episodes consolidated
-# if (sgtf.long[episode, .N]) {
-# 	# TODO stderr output on swaps
-# 	warn(c(
-# 		sprintf(
-# 			"WARN: %i caseid_hash have tests separated by >%i days with SGTF shifts:",
-# 			length(change.ids), short.threshold
-# 		),
-# 		sgtf.long[order(date)][
-# 			caseid_hash %in% change.ids,
-# 			.(
-# 				span = paste(date, collapse = "=>"),
-# 				srs = paste(sgtf, collapse = "")
-# 			),
-# 			by=caseid_hash
-# 		][, paste(sprintf("%s: %s == %s", caseid_hash, span, srs), collapse = "\n") ],
-# 		"Consolidated as:",
-# 		sgtf.long.processed[caseid_hash %in% change.ids,
-# 							.(
-# 								span = paste(date, collapse = "=>"),
-# 								srs = paste(sgtf, collapse = "")
-# 							),
-# 							by=caseid_hash
-# 		][, paste(sprintf("%s: %s == %s", caseid_hash, span, srs), collapse = "\n") ]
-# 	))
-# }
-# if (sgtf.long[caseid_hash %in% non.changes, .N]) {
-# 	warn(c(
-# 		sprintf(
-# 			"WARN: %i caseid_hash have tests separated by >%i consolidated into single episodes:",
-# 			length(non.changes), short.threshold
-# 		),
-# 		sgtf.long[order(date)][
-# 			caseid_hash %in% non.changes,
-# 			.(
-# 				span = paste(date, collapse = "=>"),
-# 				srs = paste(sgtf, collapse = "")
-# 			),
-# 			by=caseid_hash
-# 		][, paste(sprintf("%s: %s == %s", caseid_hash, span, srs), collapse = "\n") ],
-# 		"Consolidated as:",
-# 		sgtf.long.processed[caseid_hash %in% non.changes,
-# 							.(
-# 								span = paste(date, collapse = "=>"),
-# 								srs = paste(sgtf, collapse = "")
-# 							),
-# 							by=caseid_hash
-# 		][, paste(sprintf("%s: %s == %s", caseid_hash, span, srs), collapse = "\n") ]
-# 	))
-# }
+#' FIXME: currently relies on the fact that there's only one >2 episode
+#' caseid_hash, which this logic works for. more generally, need to adjust
+#' to behave like the rolling rebaseline used when consolidating records
+sgtf.long <- rbindlist(lapply(long.thresholds, function(thr) {
+	sgtf.long.reduced[order(date)][
+		(change != 0) | (delay > thr) | (cdelay > thr),
+		.(province, sgtf, date, episode = 1:.N, threshold = thr),
+		by=caseid_hash
+	]
+}))
 
 sgtf.all <- setkey(rbind(
-	sgtf.singular,
-	sgtf.short,
-	sgtf.long[order(date), episode := 1:.N, by=caseid_hash]
+	sgtf.singular[, threshold := NA_integer_ ],
+	sgtf.short[, threshold := NA_integer_ ],
+	sgtf.long
 ), province, date, caseid_hash)
 
 saveRDS(sgtf.all, tail(.args, 1))

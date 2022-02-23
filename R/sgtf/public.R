@@ -8,9 +8,7 @@ suppressPackageStartupMessages({
     file.path("refdata", sprintf(c("sgtf_ll_%s.rds", "sgtf_%s.csv"), .debug[1]))
 ) else commandArgs(trailingOnly = TRUE)
 
-dt <- readRDS(.args[1])[, infection := c("reinfection", "primary")[(inf == 1)+1] ]
-
-dt[, date := specreceiveddate ]
+dt <- readRDS(.args[1])[, infection := fifelse(reinf, "reinfection", "primary") ]
 
 res <- dcast(dt, prov + date + infection ~ sgtf, fun.aggregate = length)
 
