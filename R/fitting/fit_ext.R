@@ -17,7 +17,7 @@ symblib <- dynlib(tools::file_path_sans_ext(.args[3]))
 dyn.load(symblib)
 
 ## fit (using all defaults)
-tt <- tmb_fit(data = as_tibble(dt),
+fit <- tmb_fit(data = as_tibble(dt),
 	two_stage = TRUE,
 	upper = list(log_theta = 20),
 	lower = NULL,
