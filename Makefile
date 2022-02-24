@@ -14,7 +14,7 @@
 -include makefiles/local.makefile
 
 ## jd.local
-%.local: makefiles/%.makefile
+%.local: makefiles/%.local
 	cd makefiles && /bin/ln -fs $< local.makefile
 
 default: all
