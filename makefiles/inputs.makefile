@@ -102,6 +102,9 @@ ${INDIR}/timing.rds: R/timing.R | ${INDIR}
 ${INDIR}/tmb.rda: R/fitting/tmb_funs.R | ${INDIR}
 	$(call R)
 
+{INDIR}/tmb_ext.rda: R/fitting/tmb_funs_ext.R | ${INDIR}
+	$(call R)
+
 ${INDIR}/%/incidence_ensemble.rds: R/ensemble.R ${INDIR}/incidence.rds ${OUTDIR}/sgtf/%/sims.rds
 	$(call R)
 
