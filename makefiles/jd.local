@@ -1,0 +1,3 @@
+REFDIR := ~/Dropbox/saco
+FIGFMT ?= png
+DLDIR  ?= ~/Dropbox/resources/sa_drop
