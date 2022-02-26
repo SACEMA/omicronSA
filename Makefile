@@ -13,9 +13,9 @@
 # REFDIR & FIGFMT; can also specify in invocation, e.g. `make sometarget FIGFMT=jpg`
 -include makefiles/local.makefile
 
-## jd.local
+## jd.local:
 %.local: makefiles/%.local
-	cd makefiles && /bin/ln -fs $< local.makefile
+	cd makefiles && /bin/ln -fs $(notdir $<) local.makefile
 
 default: all
 
