@@ -102,13 +102,13 @@ ${INDIR}/timing.rds: R/timing.R | ${INDIR}
 ${INDIR}/tmb.rda: R/fitting/tmb_funs.R | ${INDIR}
 	$(call R)
 
-{INDIR}/tmb_ext.rda: R/fitting/tmb_funs_ext.R | ${INDIR}
+${INDIR}/tmb_ext.rda: R/fitting/tmb_funs_ext.R | ${INDIR}
 	$(call R)
 
 ${INDIR}/%/incidence_ensemble.rds: R/ensemble.R ${INDIR}/incidence.rds ${OUTDIR}/sgtf/%/sims.rds
 	$(call R)
 
-inputdefaults: ${INDIR}/susceptibility.rds ${INDIR}/timing.rds ${INDIR}/tmb.rda
+inputdefaults: ${INDIR}/susceptibility.rds ${INDIR}/timing.rds ${INDIR}/tmb.rda ${INDIR}/tmb_ext.rda
 
 inputclean:
 	rm -f ${DATADIR}/pos_test_ll_*.RDS
