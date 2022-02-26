@@ -17,7 +17,39 @@ fit <- readRDS(.args[2])
 
 nsim <- 1000
 set.seed(42)
-## need covariance matrix/random values for both fixed & random effects
+
+fixed_pars <- c("lodrop","logain","log_theta")
+
+cc <- coef(fit,random=TRUE)
+
+print(names(cc))
+
+quit()
+
+new_cc <- cc[-fixed_pars_position]
+
+new_vcov <- vcov(fit, random = TRUE)[-fixed_pars_position,-fixed_pars_position]
+
+new_pop_vals <- as.data.frame(MASS::mvrnorm(nsim
+		, mu = new_cc
+		, Sigma = new_vcov
+		)
+)
+
+print(cc[fixed_pars_position])
+
+fixed_pars_df <- t(as.data.frame(cc[fixed_pars_position]))[rep(1,nsim),]
+	
+rownames(fixed_pars_df) <- NULL
+colnames(fixed_pars_df) <- names(cc[fixed_pars_position])
+new_pop_vals <- (bind_cols(new_pop_vals,fixed_pars_df)
+)
+
+## Need to work on the names
+print(new_pop_vals)
+
+print(dim(new_pop_vals))
+
 pop_vals <- MASS::mvrnorm(
 	nsim,
 	mu = coef(fit, random = TRUE),
