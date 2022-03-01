@@ -43,13 +43,19 @@ get_names <- function(x) as.character(unique(x))
 
 ##' disambiguate locations
 ##' @param x named object (matrix or vector)
-##' @param names character vector to append to target names
+##' @param provs character vector to append to target names
 ##' @param fix_vars variables to disambiguate
+##' @param FUN inferred function for extracting parameter names
 fix_prov_names <- function(
-	x,
-	names = get_names(x$prov),
-    fix_vars = "loc"
+	x, provs,
+	fix_vars = {
+		tmp <- sort(fun(x))
+		tmprle <- rel(tmp)
+		tmprle$values[tmprle$lengths > 1]
+	},
+	fun = if (is.null(dim(x))) base::names else base::colname
 ) {
+	s
     for (f in fix_vars) {
         target <- paste0("^", f)
         repl <- sprintf("%s.%s", f, names)
@@ -67,7 +73,7 @@ anonymize_names <- function(x) {
     return(setNames(x, gsub("\\..*$","",names(x))))
 }
 
-#' TODO unused?          
+#' TODO unused?
 ##' turn on tracing for a TMB object
 ##' @param obj a TMB object (result of \code{MakeADFun})
 ##' @param trace should tracing be enabled?
@@ -105,7 +111,7 @@ vcov.TMB <- function(x, random = FALSE, use_numDeriv = FALSE) {
     		return(sdr$cov.fixed)
     	} else return(solve(sdr$jointPrecision))
     }
-    
+
 }
 
 #' used like R class methods
@@ -220,9 +226,9 @@ tmb_fit <- function(
 	data_vars <- c("prov", "time", "omicron", "tot", "reinf")
 
     betabinom_param <- match.arg(betabinom_param)
-    
+
     fit_vars <- c("log_deltar", "lodrop", "logain", "beta_reinf", betabinom_param)
-    
+
     #' input checks
     stopifnot(
     	length(setdiff(fit_vars, names(start))) == 0, #' init. con must contain all keys
@@ -231,11 +237,11 @@ tmb_fit <- function(
     	is.factor(data$prov), # province must be a factor
     	is.logical(reinf_effect) # reinf_effect must be TRUE or FALSE
     )
-    
+
 	tmb_pars_binom <- c(start, list(log_theta = NA_real_, log_sigma = NA_real_))
-	
+
 	np <- length(unique(data$prov))
-	
+
     if (!reinf_effect) {
 		## fix reinf to starting value (== 0 by default)
 		map <- c(map, list(
@@ -250,7 +256,7 @@ tmb_fit <- function(
 		nprov = np, debug = debug_level,
         perfect_tests = perfect_tests
 	))
-	
+
 	if (!is.null(priors)) {
 		for (nm in names(priors)) {
 				tmb_data[[paste0("prior_",nm)]] <- priors[[nm]]
@@ -258,7 +264,7 @@ tmb_fit <- function(
 	}
 
 	loc_init <- est_thresholds(data)
-	
+
 	nRE <- 1 ## FIXME: need to reuse/adapt/adjust if we have correlated REs
 	tmb_pars_binom <- binom_pars(tmb_pars_binom, loc_init)
 
@@ -304,7 +310,7 @@ tmb_fit <- function(
     	optim_args$map$log_sigma <- NULL
     	optim_args$parameters$log_sigma <- 0
     }
-	
+
 	tmb_betabinom <- do.call(MakeADFun, optim_args)
 	uvec <- default_vec(Inf, tmb_betabinom, upper)
 	lvec <- default_vec(-Inf, tmb_betabinom, lower)
@@ -316,7 +322,7 @@ tmb_fit <- function(
 			upper = uvec, lower = lvec
 		)
 	)
-	
+
 	return(mklogistfit(tmb_betabinom, tmb_file, get_names(data$prov), include_sdr = include_sdr))
 }
 
@@ -447,7 +453,7 @@ predict.logistfit <- function(
                               "shape")
             }
             newfit <- MakeADFun(data = newdata,
-                                parameters = newparams, 
+                                parameters = newparams,
                                 random.start = newparams_vec[random],
                                 map = map)
             newfit$fn()
@@ -469,7 +475,7 @@ predict.logistfit <- function(
             if (nrow(ss2) > n_orig) {
                 ss2 <- ss2[-(1:n_orig),]
             }
-                
+
         }
     } else {
         if (is.null(newparams)) {
@@ -523,7 +529,7 @@ mk_completedata <- function(fit, expand = FALSE) {
     attr(dd, "check.passed") <- FALSE
     return(dd)
 }
-    
+
 ## FIXME: this is the clever 'change head and re-evaluate' trick.
 ##  better to refactor 'base-pred' into one component that modifies the object data/parms
 ## (if necessary) and another that predicts or simulates ??
@@ -563,7 +569,7 @@ mk_order <- function(x, v, anchor = "overall", FUN = mean) {
 ##' @param fit fitted model
 ##' @param vnm name of top-level parameter (overall value)
 ##' @param vec_nm name of vector as returned by REPORT()/SDREPORT()
-## FIXME: 
+## FIXME:
 get_prov_params <- function(fit, vnm = "log_deltar",
                        vec_nm = paste0(vnm, "_vec"))
 {
