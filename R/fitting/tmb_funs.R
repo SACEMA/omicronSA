@@ -32,7 +32,7 @@ regionkey = c(
 ##' @param pars named vector of parameters (names not necessarily unique)
 splitfun <- function(orig, pars) {
 	for (n in unique(names(pars))) {
-		orig[[n]] <- unname(pars[names(pars) == n])
+		orig[[n]] <- unlist(unname(pars[names(pars) == n]))
 	}
 	return(orig)
 }
@@ -42,89 +42,79 @@ splitfun <- function(orig, pars) {
 get_names <- function(x) as.character(unique(x))
 
 ##' disambiguate locations
-##' @param x named object (matrix or vector)
+##' @param x named character vector
 ##' @param provs character vector to append to target names
-##' @param fix_vars variables to disambiguate
-##' @param FUN inferred function for extracting parameter names
+##' @param fix_vars character vector; unique entries, all the set of `names(x)`
+##'		items that appear exactly `length(provs)` times
+##'		by default, select all of the names that meet this criteria
 fix_prov_names <- function(
 	x, provs,
 	fix_vars = {
-		tmp <- sort(fun(x))
-		tmprle <- rel(tmp)
-		tmprle$values[tmprle$lengths > 1]
-	},
-	fun = if (is.null(dim(x))) base::names else base::colname
+		tmp <- sort(names(x))
+		tmprle <- rle(tmp)
+		tmprle$values[tmprle$lengths == length(provs)]
+	}
 ) {
-	s
-    for (f in fix_vars) {
-        target <- paste0("^", f)
-        repl <- sprintf("%s.%s", f, names)
-        #' TODO assumes repl length is matched
-        if (!is.null(dim(x))) {
-            colnames(x)[grepl(target, colnames(x))] <- repl
-        } else {
-            names(x)[grepl(target, names(x))] <- repl
-        }
-    }
-    return(x)
+	stopifnot(length(fix_vars) == length(unique(fix_vars)))
+	stopifnot(length(intersect(names(x), fix_vars)) == length(fix_vars))
+	for (f in fix_vars) {
+		target <- paste0("^", f)
+		repl <- sprintf("%s.%s", f, provs)
+		repind <- grepl(target, names(x))
+		stopifnot(sum(repind)==length(provs))
+		names(x)[repind] <- repl
+	}
+	return(x)
 }
 
-anonymize_names <- function(x) {
-    return(setNames(x, gsub("\\..*$","",names(x))))
-}
-
-#' TODO unused?
-##' turn on tracing for a TMB object
-##' @param obj a TMB object (result of \code{MakeADFun})
-##' @param trace should tracing be enabled?
-# set_trace <- function(obj, trace = TRUE) {
-# 		environment(obj$fn)$tracepar <- trace
-# 		return(invisible(NULL))
-# }
+anonymize_names <- function(x) return(setNames(x, gsub("\\..*$","",names(x))))
 
 #' used like R class methods
 ## FIXME: separate coef.logistfit that sanitizes/disambiguates province-specific values?
 coef.TMB <- function(x, random = FALSE) {
-		ee <- environment(x$fn)
-		r <- ee$last.par.best
-		rand <- ee$random
-		if (!random && length(rand)>0) {
-				r <- r[-rand]
-		}
-		return(r)
+	ee <- environment(x$fn)
+	r <- ee$last.par.best
+	rand <- ee$random
+	if (!random && length(rand)>0) {
+		r <- r[-rand]
+	}
+	return(r)
 }
 
 #' used like R class methods
 vcov.TMB <- function(x, random = FALSE, use_numDeriv = FALSE) {
-    cc <- coef.TMB(x, random = random)
-    if (use_numDeriv) {
-        if (!require("numDeriv")) stop('need numDeriv package for TMB vcov')
-        H <- numDeriv::jacobian(func = x$gr, x = cc)
-        ## fixme: robustify?
-        V <- solve(H)
-        nn <- names(cc)
-        dimnames(V) <- list(nn,nn)
-        return(V)
-    } else {
-    	sdr <- get_sdr(x)
-    	if (!random) {
-    		return(sdr$cov.fixed)
-    	} else return(solve(sdr$jointPrecision))
-    }
-
+	if (use_numDeriv) {
+		cc <- coef.TMB(x, random = random)
+		if (!require("numDeriv")) stop('need numDeriv package for TMB vcov')
+		H <- numDeriv::jacobian(func = x$gr, x = cc)
+		## fixme: robustify?
+		V <- solve(H)
+		nn <- names(cc)
+		dimnames(V) <- list(nn, nn)
+		return(V)
+	} else {
+		sdr <- get_sdr(x)
+		if (!random) {
+			return(sdr$cov.fixed)
+		} else {
+			return(solve(sdr$jointPrecision))
+		}
+	}
 }
 
 #' used like R class methods
 logLik.TMB <- function(x) {
 	## is x$fn() safe (uses last.par) or do we need last.par.best ?
-    val <- -1*x$fn()
-    attr(val, "df") <- length(coef(x))
+	val <- -1*x$fn()
+	attr(val, "df") <- length(coef.TMB(x))
 	return(val)
 }
 
 #' used like R class methods
 print.TMB <- function(x) {
-	cat("TMB model\n\nParameters:\n",x$par,"\n")
+	cat("TMB model\n\nParameters:\n")
+	print(x$par)
+	cat("\n")
 	return(invisible(x))
 }
 
@@ -136,25 +126,39 @@ prior_params <- function(lwr, upr, conf = 0.95) {
 	c(mean = m, sd = s)
 }
 
-est_thresholds <- function(dt) as.data.table(dt)[,.(
-	omicron=sum(omicron), tot=sum(tot)), keyby=.(prov, time)
-][, .SD[
-		CJ(time=min(time):max(time)),
-		on=.(time),
-		.(time, omicron=nafill(omicron, fill=0), tot=nafill(tot, fill = 0))
-	],
-	keyby=prov
-][,
-  .(time, prop=frollsum(omicron, n = 7, align = "center")/frollsum(tot, n = 7, align = "center")),
-  keyby = prov
-][, .(tmid = time[which.max(prop > 0.5)]), keyby=prov]$tmid
+#' TODO: actually pre-estimate reference threshold value?
+#' as written below does not seem to behave well
+# est_thresholds <- function(dt) as.data.table(dt)[,.(
+# 	omicron=sum(omicron), tot=sum(tot)
+# ), keyby=.(prov, time) ][,
+# 	.SD[
+# 		CJ(time=min(time):max(time)),
+# 		on=.(time),
+# 		.(time, omicron=nafill(omicron, fill=0), tot=nafill(tot, fill = 0))
+# 	],
+# 	keyby=prov
+# ][,
+# 	.(
+# 		time, prop = frollsum(omicron, n = 7, align = "center")/frollsum(tot, n = 7, align = "center")
+# 	),
+# 	keyby = prov
+# ][, .(
+# 	tmid = time[which.max(prop > 0.5)]
+# ), keyby = prov
+# ]$tmid
+
+est_thresholds <- function(dt) as.data.table(dt)[,
+	round(diff(range(time))/2 + min(time)),
+	by = prov
+]$V1
 
 binom_pars <- function(
 	base_pars, locs,
-	b_logdeltar = 0, b_reinf = 0,
+	b_logdeltar = 0,
+	b_reinf = 0,
 	logsd_logdeltar = -1,
 	logsd_reinf = -1
-) c(
+) splitfun(
 	base_pars, list(
 	loc = locs,
 	b_logdeltar = rep(b_logdeltar, length(locs)),
@@ -164,19 +168,17 @@ binom_pars <- function(
 ))
 
 start_opts <- function(
-	betabinom_param = c("log_theta", "log_sigma"),
+	bbpar,
 	log_deltar = log(0.1),
 	lodrop = -4, logain = -7,
-	beta_reinf = 0,
-	bbpar = log(100)
+	beta_reinf = 1
 ) {
-	betabinom_param <- match.arg(betabinom_param)
 	res <- list(
 		log_deltar = log_deltar,
 		lodrop = lodrop, logain = logain,
 		beta_reinf = beta_reinf
 	)
-	res[[betabinom_param]] <- bbpar
+	res[[bbpar]] <- 0
 	res
 }
 
@@ -202,19 +204,19 @@ tmb_fit <- function(
 	data,
 	two_stage = TRUE,
 	reinf_effect = "reinf" %in% names(data),
-    betabinom_param = c("log_theta", "log_sigma"),
+	betabinom_param = c("log_theta", "log_sigma"),
 	start = start_opts(betabinom_param),
-	upper = list(log_theta = 20),
+	upper = list(log_theta = 10),
 	lower = list(logsd_logdeltar = -5),
 	priors = list(
-		logsd_logdeltar = prior_params(log(0.01), log(0.3)),
-        logsd_reinf = prior_params(-3, 3)
+		logsd_logdeltar = prior_params(log(0.01), log(0.75)),
+		logsd_reinf = prior_params(-3, 3)
 	),
-    map = list(),
+	map = list(),
 	debug_level = 0,
 	tmb_file = NULL,
-    include_sdr = TRUE,
-    perfect_tests = FALSE,
+	include_sdr = TRUE,
+	perfect_tests = FALSE,
 	browsing = interactive()
 ) {
 	if (browsing) browser()
@@ -223,33 +225,35 @@ tmb_fit <- function(
 		dyn.load(dynlib(tmb_file))
 	}
 
+	#' check that all of these are in present in data
 	data_vars <- c("prov", "time", "omicron", "tot", "reinf")
+	#' check that all of these are in initial guess
+	betabinom_param <- match.arg(betabinom_param)
+	fit_vars <- c("log_deltar", "lodrop", "logain", "beta_reinf", betabinom_param)
 
-    betabinom_param <- match.arg(betabinom_param)
+	#' input checks
+	stopifnot(
+		length(setdiff(fit_vars, names(start))) == 0, #' init. con must contain all keys
+		is.data.table(data), #' use dt or operations will be fussy
+		length(setdiff(data_vars, names(data))) == 0, #' data must have all the columns
+		is.factor(data$prov), # province must be a factor
+		is.logical(reinf_effect) # reinf_effect must be TRUE or FALSE
+	)
 
-    fit_vars <- c("log_deltar", "lodrop", "logain", "beta_reinf", betabinom_param)
-
-    #' input checks
-    stopifnot(
-    	length(setdiff(fit_vars, names(start))) == 0, #' init. con must contain all keys
-    	is.data.table(data), #' use dt or operations will be fussy
-    	length(setdiff(data_vars, names(data))) == 0, #' data must have all the columns
-    	is.factor(data$prov), # province must be a factor
-    	is.logical(reinf_effect) # reinf_effect must be TRUE or FALSE
-    )
-
-	tmb_pars_binom <- c(start, list(log_theta = NA_real_, log_sigma = NA_real_))
+	if (!reinf_effect) {
+		## fix reinf to starting value (== 0 by default)
+		map <- splitfun(map, list(
+			beta_reinf = factor(NA),
+			b_reinf = factor(rep(NA, np)),
+			logsd_reinf = factor(NA)
+		))
+		if (start['beta_reinf'] != 0) warning("fixed reinfection effect, but non-zero assumption")
+	}
+	
+	#' for the binomial prefit, ignore betabinomal parameterization
+	tmb_pars_binom <- splitfun(start, list(log_theta = NA_real_, log_sigma = NA_real_))
 
 	np <- length(unique(data$prov))
-
-    if (!reinf_effect) {
-		## fix reinf to starting value (== 0 by default)
-		map <- c(map, list(
-			beta_reinf = factor(NA),
-        	b_reinf = factor(rep(NA, np)),
-            logsd_reinf = factor(NA)
-        ))
-	}
 
 	tmb_data <- c(
 		data[, data_vars, with = F], list(
@@ -258,9 +262,8 @@ tmb_fit <- function(
 	))
 
 	if (!is.null(priors)) {
-		for (nm in names(priors)) {
-				tmb_data[[paste0("prior_",nm)]] <- priors[[nm]]
-		}
+		names(priors) <- sprintf("prior_%s", names(priors))
+		tmb_data <- c(tmb_data, priors)
 	}
 
 	loc_init <- est_thresholds(data)
@@ -277,7 +280,7 @@ tmb_fit <- function(
 			maxit = 1000,
 			fail.action = rep("warning", 3)
 		),
-		map = c(map, list(log_theta = factor(NA), log_sigma = factor(NA))),
+		map = splitfun(map, list(log_theta = factor(NA), log_sigma = factor(NA))),
 		silent = TRUE
 	)
 
@@ -312,8 +315,8 @@ tmb_fit <- function(
     }
 
 	tmb_betabinom <- do.call(MakeADFun, optim_args)
-	uvec <- default_vec(Inf, tmb_betabinom, upper)
-	lvec <- default_vec(-Inf, tmb_betabinom, lower)
+	uvec <- default_vec(Inf, tmb_betabinom$par, upper)
+	lvec <- default_vec(-Inf, tmb_betabinom$par, lower)
 
 	tmb_betabinom_opt <- with(
 		tmb_betabinom, optim(
@@ -574,7 +577,7 @@ get_prov_params <- function(fit, vnm = "log_deltar",
                        vec_nm = paste0(vnm, "_vec"))
 {
     rr <- sdreport_split(fit)
-    v <- c(coef(fit)[[vnm]],
+    v <- c(coef.TMB(fit)[[vnm]],
            rr$value[[vec_nm]]
            )
     s <- c(

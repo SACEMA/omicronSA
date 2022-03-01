@@ -25,12 +25,12 @@ pop_vals <- MASS::mvrnorm(
 )
 
 deltar_mat <- exp(
-	pop_vals[, colnames(pop_vals) == "b_logdeltar", drop = F] *
+	pop_vals[, colnames(pop_vals) %like% "b_logdeltar", drop = F] *
 		exp(pop_vals[, "logsd_logdeltar"]) +
 		pop_vals[, "log_deltar"]
 )
 
-colnames(deltar_mat) <- sprintf("deltar.%s", get_prov_names(fit))
+colnames(deltar_mat) <- gsub("b_logdeltar", "deltar", colnames(deltar_mat))
 
 loc_vals <- pop_vals[, colnames(pop_vals) %like% "loc", drop = F]
 
@@ -43,10 +43,10 @@ beta_shape <- exp(pop_vals[, grepl(shape_regex, colnames(pop_vals)), drop = F])
 
 if("beta_reinf" %in% colnames(pop_vals)){
 	reinf_mat <- 
-		pop_vals[, colnames(pop_vals) == "b_reinf", drop = F] *
+		pop_vals[, colnames(pop_vals) %like% "b_reinf", drop = F] *
 		exp(pop_vals[,"logsd_reinf"]) +
 		pop_vals[,"beta_reinf"]
-	colnames(reinf_mat) <- sprintf("reinf.%s", get_prov_names(fit))
+	colnames(reinf_mat) <- gsub("b_reinf", "reinf", colnames(reinf_mat))
 } else {
 	reinf_mat <- c()
 }
