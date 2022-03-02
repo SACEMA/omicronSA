@@ -240,6 +240,8 @@ tmb_fit <- function(
 		is.logical(reinf_effect) # reinf_effect must be TRUE or FALSE
 	)
 
+	np <- length(unique(data$prov))
+	
 	if (!reinf_effect) {
 		## fix reinf to starting value (== 0 by default)
 		map <- splitfun(map, list(
@@ -252,8 +254,6 @@ tmb_fit <- function(
 	
 	#' for the binomial prefit, ignore betabinomal parameterization
 	tmb_pars_binom <- splitfun(start, list(log_theta = NA_real_, log_sigma = NA_real_))
-
-	np <- length(unique(data$prov))
 
 	tmb_data <- c(
 		data[, data_vars, with = F], list(

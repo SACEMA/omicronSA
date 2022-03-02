@@ -18,6 +18,13 @@ load(.args[2])
 symblib <- dynlib(tools::file_path_sans_ext(.args[3]))
 dyn.load(symblib)
 
+#' based on subsequent steps, the EC province does not have
+#' sufficient data to use for estimation
+#' hence, we exclude it at this stage, and rebase line the factors
+dt <- dt[prov != "EC"][,
+	prov := factor(prov, levels = setdiff(levels(prov), "EC"), ordered = TRUE)
+]
+
 ## fit (using all defaults)
 fit <- tmb_fit(
 	data = dt[

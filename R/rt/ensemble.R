@@ -1,32 +1,28 @@
 
-suppressPackageStartupMessages({
-    require(data.table)
-})
+.pkgs <- c("data.table")
+stopifnot(all(sapply(.pkgs, require, character.only = TRUE, quietly = TRUE)))
 
 .debug <- c("2021-11-27", "2021-12-06")[2]
 .args <- if (interactive()) c(
 	file.path("analysis", "input", "incidence.rds"),
-	file.path("analysis", "input", "simDates.rda"),
 	file.path("analysis", "input", "tmb.rda"),
 	file.path("analysis", "output", .debug, "ensemble.rds"),
 	file.path("analysis", "output", .debug, "incidence_ensemble.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
 end.date <- as.Date(basename(dirname(tail(.args, 1))))
+#' load the TMB model convenience functions + simulation references
+load(.args[2])
 
 #' load the incidence we're going to use for Rt calculation
 #' limited to from OCT 1 to the data truncation date
-dt <- readRDS(.args[1])[between(date, as.Date("2021-10-01"), end.date) & province != "ALL"]
+dt <- readRDS(.args[1])[between(date, rtStart, end.date) & province != "ALL"]
 
-#' load the TMB model convenience functions + simulation references
-load(.args[2])
-load(.args[3])
-
-ens.dt <- readRDS(.args[4])[, province := regionkey[as.character(prov)] ]
+ens.dt <- readRDS(.args[3])[, province := regionkey[as.character(prov)] ]
 
 dt[, time := as.numeric(date - zeroDate) ]
 
-res.dt <- ens.dt[dt, on=.(province), allow.cartesian = TRUE][,
+res.dt <- ens.dt[dt, on=.(province), allow.cartesian = TRUE, nomatch = 0][,
 	c("propreinf", "propprimary") := .(
 		baselogis(time, loc, deltar, lodrop = -Inf, logain = -Inf, intercept = reinf),
 		baselogis(time, loc, deltar, lodrop = -Inf, logain = -Inf)
@@ -38,23 +34,22 @@ res.dt <- ens.dt[dt, on=.(province), allow.cartesian = TRUE][,
 	)  
 ]
 
-#' FIXME offsets to seeds should be non overlapping 
 #' n.b. this draw scheme ensures that given the same start date each draw has
 #' the same series quantile sequence for proportion draws (though possibly longer)
 #' and then for value draws (again, possibly longer) the series of random draws
 #' is also the same for each underlying sample, so only variability due to
 #' parameter uncertainty
-res.dt[,
+res.dt[order(sample, time),
 	c("qbetareinf", "qbinoreinf", "qbetaprime", "qbinoprime") := {
 		smplen <- length(unique(sample))
 		serieslen <- .N/smplen
-		set.seed(8675309 + as.integer(prov))
+		set.seed(8675309L + as.integer(prov))
 		qbetareinf <- runif(serieslen)
-		set.seed(8675309 + as.integer(prov)*2)
+		set.seed(8675309L + as.integer(prov) + 100)
 		qbinoreinf <- runif(serieslen)
-		set.seed(8675309 + as.integer(prov)*3)
+		set.seed(8675309L + as.integer(prov) + 200)
 		qbetaprime <- runif(serieslen)
-		set.seed(8675309 + as.integer(prov)*4)
+		set.seed(8675309L + as.integer(prov) + 300)
 		qbinoprime <- runif(serieslen)
 		.(
 			rep(qbetareinf, smplen),
@@ -66,11 +61,21 @@ res.dt[,
 	by = prov
 ]
 
+#' default to binomial proportion
+#' if the fit found support for beta-binomial distribution
+#' (i.e. small bb parameter => non-sharp binomial), use beta-binomial
 res.dt[, c(
 	"reinfprob", "primeprob"
 ) := .(
-	fifelse(beta_shape <= 30, qbeta(qbetareinf, a.reinf, b.reinf), propreinf),
-	fifelse(beta_shape <= 30, qbeta(qbetaprime, a.pri, b.pri), propprime)
+	propreinf,
+	propprimary
+) ]
+#' N.B. does not appear to be support for beta-binomial
+res.dt[beta_shape <= 30, c(
+	"reinfprob", "primeprob"
+) := .(
+	qbeta(qbetareinf, a.reinf, b.reinf),
+	qbeta(qbetaprime, a.pri, b.pri)
 ) ]
 
 inc.dt <- res.dt[, {
@@ -80,6 +85,7 @@ inc.dt <- res.dt[, {
 } ]
 
 inc.dt[, var := .(dp+dr) ][, ref := tot-var ]
+
 keep.dt <- inc.dt[,
 	.(keep = (sum(ref > 0) > 14) & (sum(var > 0) > 14)), by=.(prov, sample)
 ][, .(keep = all(keep)), by=sample ][keep == TRUE, .(sample, newsample = 1:.N)][newsample <= 1000]
