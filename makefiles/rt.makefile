@@ -38,9 +38,11 @@ ${OUTDIR}/$(1)/$(2)/%_${RTPAT}: R/rt/estimate.R ${OUTDIR}/$(1)/incidence_ensembl
 
 endef
 
+incerr = ${DATADIR}/incens_$(1).log
+
 define rtdates =
 ${OUTDIR}/$(1)/incidence_ensemble.rds: R/rt/ensemble.R ${ENSIN} ${OUTDIR}/$(1)/ensemble.rds
-	$$(call R)
+	$$(call R) 2> $$(call incerr,$(1))
 
 $(eval $(foreach scn,${VARSCNS},$(call jsondep,$(1),${scn})))
 
