@@ -1,15 +1,22 @@
 
 REDFAC := 0.5
 
+#' establish reference generation interval
 ${INDIR}/delta.json: R/rt/baseline_GI.R | ${INDIR}
 	$(call R)
 
+#' scenario: delta == omicron generation interval
 ${INDIR}/omicron.json: ${INDIR}/delta.json
 	cp $< $@
 
+#' scenario: omicron has shorter generation interval, due to shorter
+#' latent period (i.e. time from infection => infectiousness)
 ${INDIR}/omicronredlat.json: R/rt/reducelat_GI.R
 	$(call R,${REDFAC})
 
+#' scenario: omicron has shorter generation interval, due to both shorter
+#' latent AND infectious period
+#' (i.e. time from infection => infectiousness & duration of infectiousness)
 ${INDIR}/omicronredinf.json: R/rt/reduceinf_GI.R
 	$(call R,${REDFAC})
 
@@ -17,7 +24,8 @@ VARSCNS := delta omicron omicronredlat omicronredinf
 
 rtdefaults: $(patsubst %,${INDIR}/%.json,${VARSCNS})
 
-ENSIN := $(addprefix ${INDIR}/,incidence.rds simDates.rda tmb.rda)
+#' inputs needed for creating Rt inputs
+ENSIN := $(addprefix ${INDIR}/,incidence.rds tmb.rda)
 
 RTPAT := rt.rds
 
@@ -30,9 +38,11 @@ ${OUTDIR}/$(1)/$(2)/%_${RTPAT}: R/rt/estimate.R ${OUTDIR}/$(1)/incidence_ensembl
 
 endef
 
+incerr = ${DATADIR}/incens_$(1).log
+
 define rtdates =
 ${OUTDIR}/$(1)/incidence_ensemble.rds: R/rt/ensemble.R ${ENSIN} ${OUTDIR}/$(1)/ensemble.rds
-	$$(call R)
+	$$(call R) 2> $$(call incerr,$(1))
 
 $(eval $(foreach scn,${VARSCNS},$(call jsondep,$(1),${scn})))
 
@@ -40,7 +50,7 @@ ${OUTDIR}/$(1)/ratios.rds: R/rt/consolidate.R $(wildcard ${ESTDIR}/$(1)/*_${RTPA
 	Rscript $$< $$| ${RTPAT} $$@
 
 #FIXME: currently runs indefinitely for 11-27 truncation date
-#rtdefaults: ${OUTDIR}/$(1)/incidence_ensemble.rds
+rtdefaults: ${OUTDIR}/$(1)/incidence_ensemble.rds
 
 endef
 
