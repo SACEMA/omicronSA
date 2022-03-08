@@ -1,6 +1,19 @@
 
 REDFAC := 0.5
 
+#' inputs needed for creating Rt inputs
+ENSIN := $(addprefix ${INDIR}/,incidence.rds tmb.rda)
+
+incerr = ${DATADIR}/incens_$(1).log
+
+#' create incidence ensembles, based on end dates from reference ensemble
+${OUTDIR}/%/incidence_ensemble.rds: R/rt/ensemble.R ${ENSIN} ${OUTDIR}/%/ensemble.rds
+	$(call R,$*) 2> $(call incerr,$*)
+
+${OUTDIR}/%/ratios.rds: R/rt/consolidate.R $(wildcard ${ESTDIR}/%/*_${RTPAT}) | ${ESTDIR}/%
+	Rscript $$< $$| ${RTPAT} $$@
+
+
 #' establish reference generation interval
 ${INDIR}/delta.json: R/rt/baseline_GI.R | ${INDIR}
 	$(call R)
@@ -24,30 +37,25 @@ VARSCNS := delta omicron omicronredlat omicronredinf
 
 rtdefaults: $(patsubst %,${INDIR}/%.json,${VARSCNS})
 
-#' inputs needed for creating Rt inputs
-ENSIN := $(addprefix ${INDIR}/,incidence.rds tmb.rda)
-
 RTPAT := rt.rds
 
+# n.b. rule for ${OUTDIR}/${DATE} defined in fitting.makefile
 define jsondep =
-${OUTDIR}/$(1)/$(2):
+${OUTDIR}/$(1)/$(2): | ${OUTDIR}/$(1)
 	mkdir -p $$@
 
+rtdefaults: ${OUTDIR}/$(1)/$(2)
+
+# the % match here is province_sample. so we're making
+# ${OUTDIR}/${DATE}/${SCENARIO}/${PROV}_${SAMPLE}_rt.rds
 ${OUTDIR}/$(1)/$(2)/%_${RTPAT}: R/rt/estimate.R ${OUTDIR}/$(1)/incidence_ensemble.rds ${INDIR}/$(2).json | ${OUTDIR}/$(1)/$(2)
 	$$(call R,$$(subst _, ,$$*))
 
 endef
 
-incerr = ${DATADIR}/incens_$(1).log
-
+#' $1 is a YYYY-MM-DD date
 define rtdates =
-${OUTDIR}/$(1)/incidence_ensemble.rds: R/rt/ensemble.R ${ENSIN} ${OUTDIR}/$(1)/ensemble.rds
-	$$(call R) 2> $$(call incerr,$(1))
-
 $(eval $(foreach scn,${VARSCNS},$(call jsondep,$(1),${scn})))
-
-${OUTDIR}/$(1)/ratios.rds: R/rt/consolidate.R $(wildcard ${ESTDIR}/$(1)/*_${RTPAT}) | ${ESTDIR}/$(1)
-	Rscript $$< $$| ${RTPAT} $$@
 
 #FIXME: currently runs indefinitely for 11-27 truncation date
 rtdefaults: ${OUTDIR}/$(1)/incidence_ensemble.rds
@@ -58,41 +66,16 @@ $(eval $(foreach date,${CENSORDATES},$(call rtdates,${date})))
 
 RTSAMPS ?= 50
 
-${INDIR}/rtslurmref.txt: R/rt/slurm.R ${INDIR}/sgtf.rds | ${OUTDIR} $(addprefix ${OUTDIR}/,)
-	$(call R,$(firstword $|) ${RTSAMPS})
+${INDIR}/rtslurmref.txt: R/rt/slurm.R ${INDIR}/sgtf.rds | \
+	$(foreach date,${CENSORDATES},$(addprefix ${OUTDIR}/${date}/,${VARSCNS}))
+	$(call R,$| ${RTSAMPS})
+	wc -l $@
+	more $@
 
 rtdefaults: ${INDIR}/rtslurmref.txt
 
-PROVS := $(shell Rscript -e "require(data.table, quietly = TRUE); if (file.exists('${INDIR}/sgtf.rds')) cat(readRDS('${INDIR}/sgtf.rds')[, unique(prov) ])")
+PROVS := $(shell Rscript -e "require(data.table, quietly = TRUE); if (file.exists('${INDIR}/sgtf.rds')) cat(readRDS('${INDIR}/sgtf.rds')[prov != 'EC', unique(prov) ])")
 
-examplert: $(foreach pr,${PROVS},$(foreach scn,${VARSCNS},$(patsubst %,${OUTDIR}/2021-12-06/${scn}/${pr}_%_${RTPAT},$(call seq,01,${RTSAMPS}))))
+examplert: $(shell cat ${INDIR}/rtslurmref.txt)
 
-#OTHERRTDIR := ${OUTDIR}/rt
-
-#omiratios:
-#	${MAKE} ${OUTDIR}/2021-12-06/omicron_ratios.rds TARDATE=2021-12-06
-#	${MAKE} ${OUTDIR}/2021-11-27/omicron_ratios.rds TARDATE=2021-11-27
-
-#rtstudy: ${OTHERRTDIR}
-
-#RTESTS := $(addprefix ${ESTDIR}/,omicron omicronlow delta)
-
-#${OUTDIR}/%/omicron_ratios.rds: R/consolidate.R ${RTESTS} | ${ESTDIR}
-#	mkdir -p $(@D)
-#	Rscript $< $| $* $@
-
-#${ESTDIR}:
-#	mkdir -p $@
-
-#.PRECIOUS: ${ESTDIR}/%
-
-#${OTHERRTDIR}: R/rt_primary_vs_reinf.R ${INDIR}/incidence.rds
-#	$(call R)
-#	touch $@
-
-#${ESTDIR}/%/${TARPROV}_${TARSAMP}/${TARDATE}/estimate_samples.rds: R/est_rt_ratios.R ${OUTDIR}/${TARDATE}/incidence_ensemble.rds ${INDIR}/%.json | ${ESTDIR}
-#	$(call R,${TARPROV} ${TARSAMP})
-#	touch $(@D)
-
-#cleanratios:
-#	rm -rf ${RTESTS}
+consolidatert: $(patsubst %,${OUTDIR}/%/ratios.rds,${CENSORDATES})

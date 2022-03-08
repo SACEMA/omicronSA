@@ -7,10 +7,11 @@ stopifnot(all(sapply(.pkgs, require, character.only = TRUE, quietly = TRUE)))
 	file.path("analysis", "input", "incidence.rds"),
 	file.path("analysis", "input", "tmb.rda"),
 	file.path("analysis", "output", .debug, "ensemble.rds"),
+	.debug,
 	file.path("analysis", "output", .debug, "incidence_ensemble.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
-end.date <- as.Date(basename(dirname(tail(.args, 1))))
+end.date <- as.Date(.args[4])
 #' load the TMB model convenience functions + simulation references
 load(.args[2])
 
