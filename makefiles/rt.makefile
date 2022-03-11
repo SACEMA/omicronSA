@@ -39,6 +39,11 @@ rtdefaults: $(patsubst %,${INDIR}/%.json,${VARSCNS})
 
 RTPAT := rt.rds
 
+rterr = ${DATADIR}/rt_$(1).log
+
+cleanrterr:
+	rm -i ${DATADIR}/rt_*.log
+
 # n.b. rule for ${OUTDIR}/${DATE} defined in fitting.makefile
 define jsondep =
 ${OUTDIR}/$(1)/$(2): | ${OUTDIR}/$(1)
@@ -48,8 +53,10 @@ rtdefaults: ${OUTDIR}/$(1)/$(2)
 
 # the % match here is province_sample. so we're making
 # ${OUTDIR}/${DATE}/${SCENARIO}/${PROV}_${SAMPLE}_rt.rds
+# note: for documenting errors, we are appending to the error log,
+# so it needs to be manually reset with `cleanrterr` target
 ${OUTDIR}/$(1)/$(2)/%_${RTPAT}: R/rt/estimate.R ${OUTDIR}/$(1)/incidence_ensemble.rds ${INDIR}/$(2).json | ${OUTDIR}/$(1)/$(2)
-	$$(call R,$$(subst _, ,$$*))
+	$$(call R,$$(subst _, ,$$*)) 2>> $$(call rterr,$(1))
 
 endef
 
