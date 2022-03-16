@@ -6,7 +6,7 @@ stopifnot(all(sapply(.pkgs, require, character.only = TRUE, quietly = TRUE)))
 .args <- if (interactive()) c(
 	file.path("analysis", "input", "sgtf.rds"),
 	file.path("analysis", "output",
-		rep(c("2012-11-27", "2021-12-06"), each = 4),
+		rep(c("2021-11-27", "2021-12-06"), each = 4),
 		rep(c("delta", "omicron", "omicronredlat", "omicronredinf"), times = 2)
 	),
 	.debug[1],
@@ -21,7 +21,7 @@ pathfmt <- file.path("%s", "%s_%s_rt.rds")
 
 ref.dt <- setkey(as.data.table(expand.grid(
 	scenario = scenref, prov = provref, sample = samples
-)), prov, scenario)
+)), scenario, prov, sample)
 
 ref.dt[, path := sprintf(pathfmt, scenario, prov, sample) ]
 

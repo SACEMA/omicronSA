@@ -7,7 +7,7 @@ stopifnot(all(sapply(.pkgs, require, character.only = TRUE, quietly = TRUE)))
 .args <- if (interactive()) c(
 	file.path("analysis", "output", .dtdebug[1], "incidence_ensemble.rds"),
 	file.path("analysis", "input", sprintf("%s.json", .debug[1])),
-	"GP", "32",
+	"GP", "01",
 	file.path("analysis", "output", .dtdebug[1], .debug[1], sprintf("%s_%s_rt.rds", "GP", "01"))
 ) else {
   commandArgs(trailingOnly = TRUE)
@@ -70,30 +70,20 @@ Rtcalc <- function(
 )
 
 #' convert time out warnings to errors at this stage
-res <- suppressWarnings(tryCatch(Rtcalc(
-    src.dt, gi = gt, ip = inc
-), error = function(e) warning(e)))
-
-warns <- names(warnings())
-
-#' received time out error, record to stop + emit to stderr
-if (any(grepl("timed out", warns))) {
-	stop(sprintf("%s %s %s timeout", tarprov, tarsamp, scenario))
-} else if (length(warns)) {
-		
-}
+#' otherwise, record as stan fitting warnings
+res <- Rtcalc(
+	src.dt, gi = gt, ip = inc
+)
 
 #' only keep a subset of samples; do the calculation with sufficient
 #' samples to evaluate mixing etc, but synthesizing many parameter
 #' combinations
 ret <-setkey(res$samples[
 	(sample <= 1000) & (variable == "R"), .(
-		sample, date, Rt=value
+		sample, date, Rt = value
 	)
-], sample, date), warning = function(w) {
-	
-}, error = function(e) {
-	write()
-})
+], sample, date)
 
 saveRDS(ret, tail(.args, 1))
+
+gc()

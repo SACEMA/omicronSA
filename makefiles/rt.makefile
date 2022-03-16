@@ -41,6 +41,9 @@ RTPAT := rt.rds
 
 rterr = ${DATADIR}/rt_$(1).log
 
+${DATADIR}/rt_%.rds: R/rt/logreview.R ${DATADIR}/rt_%.log
+	$(call R)
+
 cleanrterr:
 	rm -i ${DATADIR}/rt_*.log
 
@@ -56,7 +59,10 @@ rtdefaults: ${OUTDIR}/$(1)/$(2)
 # note: for documenting errors, we are appending to the error log,
 # so it needs to be manually reset with `cleanrterr` target
 ${OUTDIR}/$(1)/$(2)/%_${RTPAT}: R/rt/estimate.R ${OUTDIR}/$(1)/incidence_ensemble.rds ${INDIR}/$(2).json | ${OUTDIR}/$(1)/$(2)
-	$$(call R,$$(subst _, ,$$*)) 2>> $$(call rterr,$(1))
+	echo $$* >> $(call rterr,$(1)_$(2))
+	$$(call R,$$(subst _, ,$$*)) 2>> $(call rterr,$(1)_$(2))
+
+rtlogs: $(patsubst %.log,%.rds,$(call rterr,$(1)_$(2)))
 
 endef
 
@@ -86,3 +92,4 @@ PROVS := $(shell Rscript -e "require(data.table, quietly = TRUE); if (file.exist
 examplert: $(shell cat ${INDIR}/rtslurmref.txt)
 
 consolidatert: $(patsubst %,${OUTDIR}/%/ratios.rds,${CENSORDATES})
+
