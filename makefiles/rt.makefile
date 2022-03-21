@@ -41,8 +41,11 @@ RTPAT := rt.rds
 
 rterr = ${DATADIR}/rt_$(1).log
 
-${DATADIR}/rt_%.rds: R/rt/logreview.R ${DATADIR}/rt_%.log
+${DATADIR}/rt_%.rds: R/rt/logexport.R ${DATADIR}/rt_%.log
 	$(call R)
+
+${DATADIR}/rt_check.rds: R/rt/logreview.R | rtlogs
+	$(call R,${DATADIR})
 
 cleanrterr:
 	rm -i ${DATADIR}/rt_*.log

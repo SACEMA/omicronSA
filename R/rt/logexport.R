@@ -2,28 +2,14 @@
 .pkgs <- c("data.table")
 stopifnot(all(sapply(.pkgs, require, character.only = TRUE, quietly = TRUE)))
 
-.args <- if (interactive()) c("refdata", file.path(
-	"refdata", "rt_check.rds"
-)) else commandArgs(trailingOnly = TRUE)
-
-logfiles <- grep(
-	basename(tail(.args, 1)),
-	list.files(.args[1], "rt_.*\\.rds", full.names = TRUE),
-	value = TRUE,
-	invert = TRUE
-)
-
-log.dt <- rbindlist(lapply(logfiles, function (fn) {
-	tmp <- readRDS(fn)
-	fnb <- strsplit(tools::file_path_sans_ext(basename(fn)), "_")[[1]][2:3]
-	tmp[, c("date", "scenario") := .(as.Date(fnb[1]), fnb[2]) ]
-	tmp
-}))[, .(
-	timeouts = sum(timeout),
-	divtrans = sum(divtrans > 10),
-	bulkesslow = sum(bulkesslow),
-	tailesslow = sum(tailesslow)
-), by = .(date, scenario, prov)]
+.dtdebug <- c("2021-11-27", "2021-12-06")[1]
+.scndebug <- c("delta", "omicron", "omicronredlat", "omicronredinf")[1]
+.args <- if (interactive()) file.path(
+	"refdata", c(
+		sprintf("rt_%s_%s.log", .dtdebug, .scndebug),
+		sprintf("rt_%s_%s.rds", .dtdebug, .scndebug)
+	)
+) else commandArgs(trailingOnly = TRUE)
 
 #' read in all lines from logging.
 #' should be stored as scenario key => optionally any lines about errors => scenario key
