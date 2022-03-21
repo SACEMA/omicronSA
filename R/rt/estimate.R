@@ -59,7 +59,7 @@ Rtcalc <- function(
         warmup = 200,
         cores = crs,
         control = list(adapt_delta = 0.99, max_treedepth = 20),
-        max_execution_time = 60*10,
+        max_execution_time = 60*20,
         seed = tarsamp,
         return_fit = FALSE
     ),

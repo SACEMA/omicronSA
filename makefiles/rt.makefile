@@ -96,3 +96,5 @@ examplert: $(shell cat ${INDIR}/rtslurmref.txt)
 
 consolidatert: $(patsubst %,${OUTDIR}/%/ratios.rds,${CENSORDATES})
 
+rttouch:
+	find ${OUTDIR} -name "*_${RTPAT}" -exec touch {} \+;
