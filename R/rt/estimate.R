@@ -13,6 +13,8 @@ stopifnot(all(sapply(.pkgs, require, character.only = TRUE, quietly = TRUE)))
   commandArgs(trailingOnly = TRUE)
 }
 
+VERBOSE <- fcoalesce(Sys.getenv("VERBOSE", unset = NA) == "1", interactive())
+
 scenario <- basename(tools::file_path_sans_ext(.args[2]))
 pars <- read_json(.args[2])
 parsvar <- match.arg(
@@ -37,7 +39,7 @@ src.dt <- as.data.table(
 ][,
 	.(date, confirm = get(variable)) # transform to EpiNow2 inputs
 ][
-	which.max(confirm > 0):.N # remove leading zeros
+	which.max(cumsum(confirm) > 0):.N # remove leading zeros
 ]
 
 gt <- pars$gi
@@ -47,22 +49,24 @@ Rtcalc <- function(
     case.dt,
     gp = gp_opts(),
     rt = rt_opts(),
-    gi, ip, verbose = interactive(),
+    gi, ip, verbose = VERBOSE,
+    sto = stan_opts(
+    	samples = smps,
+    	warmup = 200,
+    	cores = crs,
+    	control = list(adapt_delta = 0.99, max_treedepth = 20),
+    	max_execution_time = 60*20,
+    	seed = tarsamp,
+    	return_fit = FALSE,
+    	init_fit = "cumulative"
+    ),
     ...
 ) estimate_infections(
     reported_cases = case.dt,
     generation_time = gi,
     delays = delay_opts(ip),
     rt = rt,
-    stan = stan_opts(
-        samples = smps,
-        warmup = 200,
-        cores = crs,
-        control = list(adapt_delta = 0.99, max_treedepth = 20),
-        max_execution_time = 60*20,
-        seed = tarsamp,
-        return_fit = FALSE
-    ),
+    stan = sto,
     gp = gp,
     verbose = verbose,
     horizon = 0,
