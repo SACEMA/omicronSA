@@ -1,5 +1,5 @@
 
-.pkgs <- c("data.table", "jsonlite", "EpiNow2")
+.pkgs <- c("data.table", "jsonlite", "EpiNow2", "future")
 stopifnot(all(sapply(.pkgs, require, character.only = TRUE, quietly = TRUE)))
 
 .dtdebug <- c("2021-11-27", "2021-12-06")[2]
@@ -7,7 +7,7 @@ stopifnot(all(sapply(.pkgs, require, character.only = TRUE, quietly = TRUE)))
 .args <- if (interactive()) c(
 	file.path("analysis", "output", .dtdebug[1], "incidence_ensemble.rds"),
 	file.path("analysis", "input", sprintf("%s.json", .debug[1])),
-	"GP", "01",
+	"GP", "02",
 	file.path("analysis", "output", .dtdebug[1], .debug[1], sprintf("%s_%s_rt.rds", "GP", "01"))
 ) else {
   commandArgs(trailingOnly = TRUE)
@@ -45,6 +45,8 @@ src.dt <- as.data.table(
 gt <- pars$gi
 inc <- pars$inc
 
+future::plan(multicore)
+
 Rtcalc <- function(
     case.dt,
     gp = gp_opts(),
@@ -58,7 +60,8 @@ Rtcalc <- function(
     	max_execution_time = 60*20,
     	seed = tarsamp,
     	return_fit = FALSE,
-    	init_fit = "cumulative"
+    	init_fit = "cumulative",
+    	future = TRUE
     ),
     ...
 ) estimate_infections(

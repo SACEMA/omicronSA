@@ -35,6 +35,10 @@ parseerror <- function (charvec = character()) {
 	)
 	if (!length(dtrans)) dtrans <- 0
 	
+	#' take only the last value of dtrans; the cumulative pre-fit stage
+	#' may also indicate divergent transitions
+	dtrans <- tail(dtrans, 1)
+	
 	list(
 		timeout = any(grepl("timed out", charvec)),
 		divtrans = dtrans,
