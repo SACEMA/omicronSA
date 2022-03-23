@@ -39,10 +39,23 @@ scale_color_SGTF <- gg.scale.wrapper(
 	name = NULL
 )
 
+scale_fill_SGTF <- gg.scale.wrapper(
+	scale_fill_discrete,
+	name = NULL
+)
+
 #' date scales for pretty much everything
 scale_x_recieptdate <- gg.scale.wrapper(
 	scale_x_date,
 	name = "Sample receipt date",
+	date_breaks = "months",
+	date_minor_breaks = "weeks",
+	date_labels = "%b"
+)
+
+scale_x_impute <- gg.scale.wrapper(
+	scale_x_date,
+	name = "Imputed Test+ receipt date",
 	date_breaks = "months",
 	date_minor_breaks = "weeks",
 	date_labels = "%b"
@@ -113,21 +126,6 @@ scale_alpha_ensemble <- gg.scale.wrapper(
 	scale_alpha_manual,
 	name = NULL,
 	values = c(ensemble = 0.1, central = 1), guide = "none"
-)
-
-fromdate <- "2021-10-01"
-
-regionkey = c(
-	EC="EASTERN CAPE",
-	FS="FREE STATE",
-	GP="GAUTENG",
-	KZN="KWAZULU-NATAL",
-	LP="LIMPOPO",
-	MP="MPUMALANGA",
-	NC="NORTHERN CAPE",
-	NW="NORTH WEST",
-	WC="WESTERN CAPE",
-	ALL="ALL"
 )
 
 gg.geom.wrapper <- function(

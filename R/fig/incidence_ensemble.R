@@ -1,10 +1,8 @@
 
-suppressPackageStartupMessages({
-    require(data.table)
-    require(ggplot2)
-})
+.pkgs <- c("data.table", "ggplot2")
+stopifnot(all(sapply(.pkgs, require, character.only = TRUE, quietly = TRUE)))
 
-.debug <- c("2021-12-06", "2021-11-27")[2]
+.debug <- c("2021-12-06", "2021-11-27")[1]
 .args <- if (interactive()) c(
     file.path("analysis", "input", "incidence.rds"),
     file.path("analysis", "output", .debug, "incidence_ensemble.rds"),
@@ -13,8 +11,9 @@ suppressPackageStartupMessages({
 ) else commandArgs(trailingOnly = TRUE)
 
 enddate <- basename(dirname(tail(.args, 1)))
+load(.args[3])
 
-e.dt <- readRDS(.args[2])[between(date,"2021-10-01", enddate)][sample <= 100]
+e.dt <- readRDS(.args[2])[between(date, fromdate, enddate)][sample <= 100]
 raw.dt <- readRDS(.args[1])[province %in% unique(e.dt$province)]
 
 load(tail(.args, 2)[1])
