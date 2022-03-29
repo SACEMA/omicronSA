@@ -28,6 +28,22 @@ all.sgtf <- rbind(
 	sgtf.dt[,.(infection = "all", SGTF=sum(omicron), total=sum(tot)), keyby=.(date, prov)]
 )
 
+dates <- sgtf.dt[, range(date)]
+tms <- as.integer(dates - zeroDate)
+tm.seq <- seq(tms[1], tms[2])
+
+obs.prop <- melt(fit.dt[sample <= 100, .(
+	date = tm.seq + zeroDate,
+	prime.act = baselogis(tm.seq, loc, deltar, lodrop = -Inf, logain = -Inf),
+	prime.obs = baselogis(tm.seq, loc, deltar, lodrop = lodrop, logain = logain),
+	reinf.act = baselogis(tm.seq, loc, deltar, lodrop = -Inf, logain = -Inf, intercept = reinf),
+	reinf.obs = baselogis(tm.seq, loc, deltar, lodrop = lodrop, logain = logain, intercept = reinf)
+	# tot.sgtf <- `???` # weighted average of SGTF proportion reinf
+	# tot.inc <- `???` # weighted average of all inc proportion reinf
+), by=.(prov, sample)],
+  id.vars = c("prov", "sample", "date"), variable.name = "infection"
+)
+
 shr <- list(
 	aes(date),
 	facet_wrap(~prov, nrow = 3, ncol = 3),
@@ -40,17 +56,19 @@ shr <- list(
 		name = "Infections",
 		labels = c(all = "All", primary = "Primary", reinf = "Reinfections"),
 		breaks = c("all", "primary", "reinf"),
-		guide = guide_legend(override.aes = list(stroke = 0, size = 5))
+		values = c(all="black", reinf = "blue", primary = "green"),
+		guide = guide_legend(override.aes = list(stroke = 0, size = 5, alpha = 0.5))
 	),
 	scale_alpha_samples(guide = guide_legend(override.aes = list(color = NA, fill = "black"))),
 	scale_x_impute(),
-	scale_y_logitprop()
+	scale_y_logitprop(),
+	coord_cartesian(ylim = c(0.01, 0.99))
 )
 
 plot.all <- ggplot(all.sgtf[prov == "ALL"]) + shr +
 	scale_size_samples() +
 	theme(
-		legend.position = c(0, 1), legend.justification = c(0, 1),
+		legend.position = c(0, .95), legend.justification = c(0, 1),
 		legend.box = "horizontal"
 	)
 

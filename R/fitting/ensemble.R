@@ -1,9 +1,6 @@
 
-#' not including `tools` here, as it should be standard-install package
-#' and is only used for one function
-suppressPackageStartupMessages({
-	stopifnot(all(sapply(c("data.table", "TMB"), require, character.only = TRUE)))
-})
+.pkgs <- c("data.table", "TMB", "tools")
+stopifnot(all(sapply(.pkgs, require, character.only = TRUE, quietly = TRUE)))
 
 .debug <- c("2021-11-27", "2021-12-06")[2]
 .args <- if (interactive()) c(
@@ -40,6 +37,7 @@ if (sum(grepl(shape_regex, colnames(pop_vals))) != 1) {
 }
 
 beta_shape <- exp(pop_vals[, grepl(shape_regex, colnames(pop_vals)), drop = F])
+dimnames(beta_shape)[2] <- "beta_shape"
 
 if("beta_reinf" %in% colnames(pop_vals)){
 	reinf_mat <- 
@@ -51,16 +49,18 @@ if("beta_reinf" %in% colnames(pop_vals)){
 	reinf_mat <- c()
 }
 
+err_mat <- pop_vals[, c("logain", "lodrop"), drop = F]
+
 wide.dt <- as.data.table(cbind(
-	deltar_mat, loc_vals, reinf_mat
+	deltar_mat, loc_vals, reinf_mat, err_mat, beta_shape
 ))[, sample := 1:.N ]
 
 long.dt <- melt(
-	wide.dt, id.vars = "sample"
+	wide.dt, id.vars = c("sample", colnames(err_mat), colnames(beta_shape))
 )[, c("variable", "cprov") := tstrsplit(variable, split = ".", fixed = TRUE) ]
 long.dt[, prov := factor(cprov, levels = get_prov_names(fit), ordered = TRUE)]
 
-byprov.dt <- dcast(long.dt, prov + sample ~ variable, value.var = "value")
-byprov.dt[, beta_shape := beta_shape, by = prov ]
+#' FIXME construct formula? prov, sample, colnames(...)
+byprov.dt <- dcast(long.dt, prov + sample + logain + lodrop + beta_shape ~ variable, value.var = "value")
 
 saveRDS(byprov.dt, tail(.args, 1))
