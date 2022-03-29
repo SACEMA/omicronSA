@@ -1,8 +1,10 @@
+#' warning: sourcing this script will clear environment
+#' meant to be used from command line, but has to be used
+#' in clean environment if used interactively
+rm(list = ls())
 
-suppressPackageStartupMessages({
-	require(ggplot2)
-	require(scales)
-})
+.pkgs <- c("ggplot2", "scales")
+stopifnot(all(sapply(.pkgs, require, character.only = TRUE, quietly = TRUE)))
 
 .args <- if (interactive()) {
 	file.path("analysis", "input", "plotref.rda")
@@ -40,7 +42,7 @@ scale_color_SGTF <- gg.scale.wrapper(
 )
 
 scale_fill_SGTF <- gg.scale.wrapper(
-	scale_fill_discrete,
+	scale_fill_manual,
 	name = NULL
 )
 
