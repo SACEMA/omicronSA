@@ -96,6 +96,7 @@ shr <- list(
 	scale_x_impute(),
 	scale_y_logitprop(),
 	scale_linetype_manual(name = NULL, labels = c(act="Latent", obs="Observed"), values = c(act="solid", obs="dotted")),
+	scale_color_manual(guide = "none", values = c(combo = "black", reinf = "blue", prime = "green")),
 	coord_cartesian(ylim = c(0.01, 0.99))
 )
 
@@ -115,7 +116,6 @@ geom_fit_lines <- function(dt) list(
 plot.all <- ggplot(all.sgtf[prov == "ALL"]) + shr +
 	geom_fit_lines(agg.dt) +
 	scale_size_samples() +
-	scale_color_manual(guide = "none", values = c(combo = "black", reinf = "blue", prime = "green")) +
 	theme(
 		legend.position = c(0, .95), legend.justification = c(0, 1),
 		legend.box = "horizontal"
@@ -123,7 +123,6 @@ plot.all <- ggplot(all.sgtf[prov == "ALL"]) + shr +
 
 plot.provs <- ggplot(all.sgtf[prov != "ALL"]) + shr +
 	geom_fit_lines(prov.dt) +
-	scale_color_manual(guide = "none", values = c(combo = "black", reinf = "blue", prime = "green")) +
 	scale_size_samples(max_size = 15/3) +
 	theme(
 		legend.position = "none",
