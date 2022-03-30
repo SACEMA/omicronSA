@@ -57,10 +57,10 @@ scale_x_recieptdate <- gg.scale.wrapper(
 
 scale_x_impute <- gg.scale.wrapper(
 	scale_x_date,
-	name = "Imputed Test+ receipt date",
+	name = "Imputed first test+ receipt date",
 	date_breaks = "months",
 	date_minor_breaks = "weeks",
-	date_labels = "%b"
+	date_labels = "%b 1"
 )
 
 #' logit scales for the fitting comparisons

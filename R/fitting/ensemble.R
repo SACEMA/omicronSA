@@ -12,7 +12,7 @@ stopifnot(all(sapply(.pkgs, require, character.only = TRUE, quietly = TRUE)))
 load(.args[1])
 fit <- readRDS(.args[2])
 
-nsim <- 1000
+nsim <- 100000
 set.seed(42)
 ## need covariance matrix/random values for both fixed & random effects
 pop_vals <- MASS::mvrnorm(
@@ -63,4 +63,10 @@ long.dt[, prov := factor(cprov, levels = get_prov_names(fit), ordered = TRUE)]
 #' FIXME construct formula? prov, sample, colnames(...)
 byprov.dt <- dcast(long.dt, prov + sample + logain + lodrop + beta_shape ~ variable, value.var = "value")
 
-saveRDS(byprov.dt, tail(.args, 1))
+#' TODO possible to extract this from fit object?
+med.dt <- dcast(
+	long.dt[,.(value = median(value), logain = median(logain), lodrop = median(lodrop), beta_shape = median(beta_shape)), by=.(prov, variable)],
+	prov + logain + lodrop + beta_shape ~ variable, value.var = "value"
+)[, sample := NA_integer_ ]
+
+saveRDS(setkeyv(rbind(byprov.dt[sample <= 1000], med.dt), key(byprov.dt)), tail(.args, 1))

@@ -18,7 +18,12 @@ load(.args[4])
 load(.args[5])
 
 fit.dt <- readRDS(.args[1])
-inc.dt <- readRDS(.args[2])[between(date, rtStart, enddate)]
+
+inc.dt <- readRDS(.args[2])[between(date, rtStart, enddate)][province != "ALL"]
+inc.dt[, prov := names(regionkey)[which(regionkey == province)], by = province ]
+inc.dt[, propr := (tot-inf1)/tot ]
+inc.dt[prov != "EC", propd := tot/sum(tot), by = date ]
+
 sgtf.dt <- readRDS(.args[3])[between(date, rtStart, enddate)]
 
 all.sgtf <- rbind(
@@ -32,7 +37,8 @@ dates <- sgtf.dt[, range(date)]
 tms <- as.integer(dates - zeroDate)
 tm.seq <- seq(tms[1], tms[2])
 
-obs.prop <- melt(fit.dt[sample <= 100, .(
+#' TODO DRY general & aggregate cases
+obs.prop <- melt(fit.dt[is.na(sample) | (sample <= 100), .(
 	date = tm.seq + zeroDate,
 	prime.act = baselogis(tm.seq, loc, deltar, lodrop = -Inf, logain = -Inf),
 	prime.obs = baselogis(tm.seq, loc, deltar, lodrop = lodrop, logain = logain),
@@ -40,8 +46,35 @@ obs.prop <- melt(fit.dt[sample <= 100, .(
 	reinf.obs = baselogis(tm.seq, loc, deltar, lodrop = lodrop, logain = logain, intercept = reinf)
 	# tot.sgtf <- `???` # weighted average of SGTF proportion reinf
 	# tot.inc <- `???` # weighted average of all inc proportion reinf
-), by=.(prov, sample)],
-  id.vars = c("prov", "sample", "date"), variable.name = "infection"
+), by=.(prov, sample)][
+	inc.dt, on=.(prov, date), prop.day := propd
+],
+  id.vars = c("prov", "sample", "date", "prop.day"), variable.name = "infection"
+)[, c("infection", "view") := tstrsplit(infection, split = ".", fixed = TRUE) ]
+
+mix.dt <- melt(fit.dt[is.na(sample) | (sample <= 100), .(
+	date = tm.seq + zeroDate,
+	prime.act = baselogis(tm.seq, loc, deltar, lodrop = -Inf, logain = -Inf),
+	prime.obs = baselogis(tm.seq, loc, deltar, lodrop = lodrop, logain = logain),
+	reinf.act = baselogis(tm.seq, loc, deltar, lodrop = -Inf, logain = -Inf, intercept = reinf),
+	reinf.obs = baselogis(tm.seq, loc, deltar, lodrop = lodrop, logain = logain, intercept = reinf)
+), by=.(sample, prov)][
+	inc.dt, on=.(prov, date), c("prop.reinf", "prop.day") := .(propr, propd)
+][,.(
+  	sample, prov, date, prop.day,
+  	combo.act = prop.reinf*reinf.act + (1-prop.reinf)*prime.act,
+	combo.obs = prop.reinf*reinf.obs + (1-prop.reinf)*prime.obs
+)],
+	id.vars = c("sample", "prov", "date", "prop.day"), variable.name = "infection"
+)[, c("infection", "view") := tstrsplit(infection, split = ".", fixed = TRUE) ]
+
+prov.dt <- rbind(obs.prop, mix.dt)
+
+prov.dt$infection <- factor(prov.dt$infection, levels = c("reinf", "prime", "combo"), ordered = TRUE)
+
+agg.dt <- rbind(
+	obs.prop[, .(prov = "ALL", value = sum(prop.day*value)), by=.(sample, date, view, infection = factor(infection, levels = c("reinf", "prime", "combo"), ordered = TRUE))],
+	mix.dt[, .(prov = "ALL", value = sum(prop.day*value)), by=.(sample, date, view, infection = factor(infection, levels = c("reinf", "prime", "combo"), ordered = TRUE))]
 )
 
 shr <- list(
@@ -51,7 +84,7 @@ shr <- list(
 		mapping = aes(y=SGTF/total, size = total, alpha = total, fill = infection, stroke = 0),
 		shape = 21
 	),
-	theme_minimal(),
+	theme_minimal(base_size = 9),
 	scale_fill_SGTF(
 		name = "Infections",
 		labels = c(all = "All", primary = "Primary", reinf = "Reinfections"),
@@ -62,17 +95,35 @@ shr <- list(
 	scale_alpha_samples(guide = guide_legend(override.aes = list(color = NA, fill = "black"))),
 	scale_x_impute(),
 	scale_y_logitprop(),
+	scale_linetype_manual(name = NULL, labels = c(act="Latent", obs="Observed"), values = c(act="solid", obs="dotted")),
 	coord_cartesian(ylim = c(0.01, 0.99))
 )
 
+geom_fit_lines <- function(dt) list(
+	geom_line(
+		aes(y = value, linetype = view, color = infection, group=interaction(view, infection, sample)),
+		dt[!is.na(sample)],
+		alpha = 0.01, size = 0.5
+	),
+	geom_line(
+		aes(y = value, linetype = view, color = infection),
+		dt[is.na(sample)],
+		alpha = 0.5, size = 0.5
+	)
+)
+
 plot.all <- ggplot(all.sgtf[prov == "ALL"]) + shr +
+	geom_fit_lines(agg.dt) +
 	scale_size_samples() +
+	scale_color_manual(guide = "none", values = c(combo = "black", reinf = "blue", prime = "green")) +
 	theme(
 		legend.position = c(0, .95), legend.justification = c(0, 1),
 		legend.box = "horizontal"
 	)
 
 plot.provs <- ggplot(all.sgtf[prov != "ALL"]) + shr +
+	geom_fit_lines(prov.dt) +
+	scale_color_manual(guide = "none", values = c(combo = "black", reinf = "blue", prime = "green")) +
 	scale_size_samples(max_size = 15/3) +
 	theme(
 		legend.position = "none",
@@ -82,44 +133,4 @@ plot.provs <- ggplot(all.sgtf[prov != "ALL"]) + shr +
 
 p.res <- plot.all + plot.provs
 
-ggsave(tail(.args, 1), p.res, width = 8, height = 4, units = "in", dpi = 600)
-
-plot.all <- ggplot(all.sgtf) + aes(date) + 
-	geom_sgtf_point(mapping = aes(y=SGTF/total, size = total, alpha = total, color = infection)) +
-	theme_minimal() +
-	theme(
-		legend.position = c(0, 1), legend.justification = c(0, 1),
-		legend.box = "horizontal"
-	) +
-	scale_color_SGTF(
-		name = "Infections",
-		labels = c(all = "All", primary = "Primary", reinf = "Reinfections"),
-		breaks = c("all", "primary", "reinf")
-	) +
-	scale_alpha_samples() +
-	scale_size_samples() +
-	scale_x_impute() +
-	scale_y_logitprop()
-
-geom_truncated_series <- function(..., refdata) list(
-    geom_line(..., data = function(dt) refdata[between(date,min(dt$date),max(dt$date))]),
-    geom_point(..., data = function(dt) refdata[date >= max(dt$date)])
-)
-
-p <- ggplot(e.dt) +
-    aes(date) + facet_wrap(~province) +
-    geom_line(
-        aes(y=tot-var, color="del", alpha = "ensemble", group=sample)) +
-    geom_line(
-        aes(y=var, color="var", alpha = "ensemble", group=sample)) +
-    geom_truncated_series(aes(y=inf1, color="rep"), refdata = raw.dt) +
-    geom_truncated_series(aes(y=tot, color="obs"), refdata = raw.dt) +
-    scale_x_recieptdate() +
-    scale_y_doubling(name="Detected Infections") +
-    scale_color_incidence() +
-    scale_alpha_ensemble() +
-    coord_cartesian(ylim = c(2, NA), expand = FALSE) +
-    theme_minimal(base_size = 14) +
-    theme(legend.position = "bottom")
-
-savehalfpage(tail(.args, 1), p)
+saveslide(tail(.args, 1), p.res)

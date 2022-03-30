@@ -2,7 +2,7 @@
 .pkgs <- c("data.table")
 stopifnot(all(sapply(.pkgs, require, character.only = TRUE, quietly = TRUE)))
 
-.debug <- c("2021-11-27", "2021-12-06")[1]
+.debug <- c("2021-11-27", "2021-12-06")[2]
 .args <- if (interactive()) c(
 	file.path("analysis", "input", "incidence.rds"),
 	file.path("analysis", "input", "tmb.rda"),
@@ -105,14 +105,14 @@ inc.dt <- res.dt[, {
 inc.dt[, var := .(dp+dr) ][, ref := tot-var ]
 
 #' TODO: unnecessary w/ removal of EC?
-keep.dt <- inc.dt[,
-	.(keep = (sum(ref > 0) > 14) & (sum(var > 0) > 14)), by=.(prov, sample)
-][, .(keep = all(keep)), by=sample ][keep == TRUE, .(sample, newsample = 1:.N)][newsample <= 1000]
-
-save.dt <- setkey(
-	inc.dt[keep.dt, on=.(sample)][, .(prov, sample = newsample, date, dp, dr, tot, inf1, var, ref)],
-	prov, sample, date
-)
+# keep.dt <- inc.dt[,
+# 	.(keep = (sum(ref > 0) > 14) & (sum(var > 0) > 14)), by=.(prov, sample)
+# ][, .(keep = all(keep)), by=sample ][keep == TRUE, .(sample, newsample = 1:.N)][newsample <= 1000]
+# 
+# save.dt <- setkey(
+# 	inc.dt[keep.dt, on=.(sample)][, .(prov, sample = newsample, date, dp, dr, tot, inf1, var, ref)],
+# 	prov, sample, date
+# )
 
 saveRDS(inc.dt, tail(.args, 1))
 
