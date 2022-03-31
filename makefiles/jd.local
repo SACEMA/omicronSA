@@ -20,7 +20,7 @@ DLDIR  ?= ~/Dropbox/resources/sa_drop
 
 ######################################################################
 
-Ignore += refdata/
+Ignore += refdata
 Sources += $(wildcard makefiles/*.local)
 
 ### Makestuff
