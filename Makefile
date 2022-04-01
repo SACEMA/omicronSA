@@ -1,4 +1,3 @@
-
 # for non-make users:
 # general syntax is
 #
@@ -62,3 +61,8 @@ list:
 	grep "^[^#[:space:]].*:" Makefile
 
 all: support inputs fitting rt# mobility susceptible thresholds figures sessioninfo
+
+## Activate a local makefile: e.g., `make jd.local`
+%.local: makefiles/%.local
+	cd makefiles && /bin/ln -fs $*.local local.makefile
+
