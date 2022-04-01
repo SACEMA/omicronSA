@@ -12,13 +12,18 @@ stopifnot(all(sapply(.pkgs, require, character.only = TRUE, quietly = TRUE)))
 load(.args[1])
 fit <- readRDS(.args[2])
 
+mle.est <- coef(fit, random = TRUE)
+
 nsim <- 100000
 set.seed(42)
 ## need covariance matrix/random values for both fixed & random effects
-pop_vals <- MASS::mvrnorm(
-	nsim,
-	mu = coef(fit, random = TRUE),
-	Sigma = vcov(fit, random =TRUE)
+pop_vals <- rbind(
+	mle.est,
+	MASS::mvrnorm(
+		nsim,
+		mu = mle.est,
+		Sigma = vcov(fit, random =TRUE)
+	)
 )
 
 deltar_mat <- exp(
@@ -53,7 +58,7 @@ err_mat <- pop_vals[, c("logain", "lodrop"), drop = F]
 
 wide.dt <- as.data.table(cbind(
 	deltar_mat, loc_vals, reinf_mat, err_mat, beta_shape
-))[, sample := 1:.N ]
+))[, sample := c(NA_integer_, 1:(.N-1)) ]
 
 long.dt <- melt(
 	wide.dt, id.vars = c("sample", colnames(err_mat), colnames(beta_shape))
@@ -64,9 +69,9 @@ long.dt[, prov := factor(cprov, levels = get_prov_names(fit), ordered = TRUE)]
 byprov.dt <- dcast(long.dt, prov + sample + logain + lodrop + beta_shape ~ variable, value.var = "value")
 
 #' TODO possible to extract this from fit object?
-med.dt <- dcast(
-	long.dt[,.(value = median(value), logain = median(logain), lodrop = median(lodrop), beta_shape = median(beta_shape)), by=.(prov, variable)],
-	prov + logain + lodrop + beta_shape ~ variable, value.var = "value"
-)[, sample := NA_integer_ ]
+# med.dt <- dcast(
+# 	long.dt[,.(value = median(value), logain = median(logain), lodrop = median(lodrop), beta_shape = median(beta_shape)), by=.(prov, variable)],
+# 	prov + logain + lodrop + beta_shape ~ variable, value.var = "value"
+# )[, sample := NA_integer_ ]
 
-saveRDS(setkeyv(rbind(byprov.dt[sample <= 1000], med.dt), key(byprov.dt)), tail(.args, 1))
+saveRDS(byprov.dt[is.na(sample) | (sample <= 1000)], tail(.args, 1))
