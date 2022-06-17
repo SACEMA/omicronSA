@@ -28,6 +28,7 @@ support: dirs
 include makefiles/inputs.makefile
 inputs: inputdefaults
 
+# perform mixed model fits
 include makefiles/fitting.makefile
 fitting: fittingdefaults
 
