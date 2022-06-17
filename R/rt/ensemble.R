@@ -97,8 +97,8 @@ res.dt[!between(reinfprob, 0, 1), reinfprob := round(reinfprob) ]
 res.dt[!between(primeprob, 0, 1), primeprob := round(primeprob) ]
 
 inc.dt <- res.dt[, {
-	dr <- qbinom(qbinoreinf, size = tot-inf1, prob = reinfprob)
-	dp <- qbinom(qbinoprime, size = inf1,     prob = primeprob)
+	dr <- fifelse(is.na(sample), round(propreinf*(tot-inf1)), qbinom(qbinoreinf, size = tot-inf1, prob = reinfprob))
+	dp <- fifelse(is.na(sample), round(propprime*inf1), qbinom(qbinoprime, size = inf1,     prob = primeprob))
 	.(prov, sample, date, dp, dr, tot, inf1)
 } ]
 

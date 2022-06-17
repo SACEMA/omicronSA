@@ -1,23 +1,155 @@
 
-suppressPackageStartupMessages({
-  require(data.table)
-  require(qs)
-})
+.pkgs <- c("data.table", "jsonlite")
+stopifnot(all(sapply(.pkgs, require, character.only = TRUE, quietly = TRUE)))
 
 .args <- if (interactive()) c(
-  # 1-2: cm, yu data
-  file.path(
-    "refdata",
-    c("contact_matrices.rds", "covidm_fit_yu.qs")
-  ),
-  # 3-5: sus, timing, mob
-  file.path(
-    "analysis",
-    "input",
-    c("susceptibility.rds", "timing.rds", "mobility.rds")
-  ),
+  file.path("refdata", "NCEM.json"),
+  file.path("refdata", "Khoury_et_al_Nat_Med_fig_1a.csv"),
+  file.path("analysis", "input", "susceptibility.rds"), # TODO move to refdata
   file.path("analysis", "output", "ngm_ratios.rds")
 ) else commandArgs(trailingOnly = TRUE)
+
+khoury_nat_med_1a = fread(.args[2])
+
+approx_titre <- function(protective_eff) with(
+	khoury_nat_med_1a,
+	approx(Efficacy, NeutTitreRelConvPlasma, protective_eff*100)$y
+)
+
+approx_eff <- function(titre_ratio) with(
+	khoury_nat_med_1a,
+	approx(NeutTitreRelConvPlasma, Efficacy, titre_ratio)$y/100
+)
+
+adj_eff <- function(init_eff, titre_ratio) approx_eff(approx_titre(init_eff)*titre_ratio)
+
+ncemparams <- within(read_json(
+	.args[1], simplifyVector = TRUE
+), {
+	pss <- pmin(pss_scale * pss_ratio, 0.95)
+	psr <- pmin(psr_scale * psr_ratio, 0.95)
+	
+	zeta <- list(
+		asymptomatic = (zeta1*pa + 1*(1-pa)*pss)/(pa+(1-pa)*pss),
+		presymptomatic = zeta1
+	)
+	
+	names(pts) <- provorder
+	
+	dur_asympmild <- 1/r1
+	dur_presymptomatic <- 1/gamma2
+	dur_treated <- 1/taus
+	dur_untreated <- 1/r8
+	# element 1 varies by age, since zeta[[1]] is age specific
+	# element 2 varies by province, since pts is province specific
+	weight_symp <- list(
+		AM = dur_asympmild*zeta[[1]],
+		S = dur_presymptomatic*zeta[[2]] + pts*dur_treated + (1-pts)*dur_untreated
+	)
+	
+	
+	# pa <- cbind(
+	# 	primary = (1-((1-pa)*pss)),
+	# 	reinfection = (1-((1-pa)*psr))
+	# )
+})
+
+#' for extracting province specific parameters
+get_pars <- function(province) {
+	within(ncemparams,{
+		weight_symp[[2]] <- rep(weight_symp[[2]][province], length(weight_symp[[1]]))
+	})
+}
+
+re-arrange model as
+dEAMa = ...from S... + ...from R... + ...from V... - to IAMa
+dESa = ibid - to ISa
+
+foi = IAMa + ISa combination
+downgraded by protection factor (for R, for V)
+then split by proportion asymp / mild vs severe
+
+
+
+asymptomatic, presymptomatic, treatment, notreatment
+zeta2_2*x[varind[13,,]]+zeta1*x[varind[14,,]]+x[varind[15,,]]+x[varind[16,,]]
+
+protection: (1*frac_non_vax + (1-eff)*frac_vax)
+#' compute the relative next generation matrix (i.e., w/o transmissibility scaling factor)
+#' 
+#' @param params a list of the NCEM parameters, from `get_pars` (i.e. for a particular province):
+#'  - `weight_symp`, the weighted transmission, `W[frominf][fromage]`
+#'  - `contacts`, a matrix of relative contact rates, `C[toage, fromage]`
+#'  - asdfafs
+#' @param immratio numeric, the fold ratio for immune protection (input into `adj_ratio(...)`)
+#' 
+#' @details Uses the states-at-infection approach to K_MN next generation matrix.
+#' The states-at-infection are
+#' 
+#'  - \eqn{E_{AM}}, _Exposed_ individuals that will later transition
+#' to \eqn{I_{AM}}, _Infectious_ individuals with asymptomatic or mild disease, and
+#'  - \eqn{E_{S}}, _Exposed_ individuals that will later transition to \eqn{I_P}, _Infectious_
+#'  presymptomatic individuals, that go onto severe disease infectious states, either treatment seeking
+#'  or not
+#'  
+#' ... with additional stratification by age. The \eqn{I_{X}} states result in different
+#' 
+#' 
+ngm <- function(
+	params, immratio = 1
+) with(params, {
+	agecats <- 1:7
+	infcats <- c("AM", "S")
+	# for convenience while iteratively constructing, make this a tensor
+	# but can later reshape it with array(K, dim = rep(length(agecats)*length(infcats), 2))
+	K <- array(0,
+		dim = rep(c(length(agecats), length(infcats)), times = 2),
+		dimnames = list(
+			toage = agecats, # to ages
+			toinf = infcats, # to state-at-infection
+			fromage = agecats, # from ages
+			frominf = infcats # from state-at-infection
+		)
+	)
+	
+	effR <- adj_eff(effR, immratio)
+	effVJ <- adj_eff(effVJ, immratio)
+	effVJR <- adj_eff(effVJR, immratio)
+	effP1 <- adj_eff(effP1, immratio)
+	effP2 <- adj_eff(effP2, immratio)
+	effP1R <- adj_eff(effP1R, immratio)
+	effP2R <- adj_eff(effP2R, immratio)
+	
+  for (
+  	ageto in dimnames(K)[1]
+  ) for (
+  	infto in dimnames(K)[2]
+  ) for (
+  	agefrom in dimnames(K)[3]
+  ) for (
+  	inffrom in dimnames(K)[4]
+  ) {
+  	K[ageto, infto, agefrom, inffrom] <- 
+  		weight_symp[[inffrom]][agefrom]*contact[agefrom, ageto]*(
+  			fracS[ageto]*paS[ageto] + fracR[ageto]*(1-effR)*paR[ageto] +
+  			fracVJ[ageto]*(1-effVJ)*paVJ
+  		)
+  }
+	
+  
+   # don't have to do anything with duration of E - no death, so survives from E
+   # w/ p = 1
+    (
+      pa[agefrom, ordfrom]*(dur_asympmild)*zeta[[1]][fromage] +
+      (1-pa[agefrom, ordfrom])*[
+        (dur_presymptomatic)*zeta[[2]] +
+        (ptreat*(duration awaiting treatment) +
+        (1-ptreat)*(duration untreated))
+      ]
+    ) * contact[agefrom, ageto] * popfrac[ageto, ordto] * protec[ordto]
+})
+
+
 
 cms <- readRDS(.args[1])
 
@@ -38,7 +170,7 @@ contact_schedule <- mob.dt[
   .(
     home = 1, work = prod(work)^ (1 / .N),
     other = prod(other)^ (1 / .N),
-    # school is often 0, so weight slightly differently 
+    # school is often 0, so weight slightly differently
     school = prod(school) ^ (1 / .N)
   ), by = .(region = abbr)
 ]
@@ -46,7 +178,7 @@ contact_schedule <- mob.dt[
 delay_gamma <- function(mu, shape, t_max, t_step) {
   scale = mu / shape;
   t_points = seq(0, t_max, by = t_step);
-  heights = pgamma(t_points + t_step/2, shape, scale = scale) - 
+  heights = pgamma(t_points + t_step/2, shape, scale = scale) -
     pgamma(pmax(0, t_points - t_step/2), shape, scale = scale);
   return (data.table(t = t_points, p = heights / sum(heights)))
 }
@@ -68,7 +200,7 @@ mean_dur <- function(dX, time_step) {
 #' @param yval, vector of asymptomatic fractions, by age
 #' @param u_multiplier, the multiplier to modify effective susceptibility
 #' @param durmultiplier, the relative multiplier to reduce durations of infectiousness
-#' 
+#'
 #' @return the eigenvalue of the ODE transmission / transition matrix
 ngmR <- function(
   dIp = delay_gamma(1.5, 4.0, t_max = 15, t_step = 0.25)$p,
@@ -82,7 +214,7 @@ ngmR <- function(
   durIp <- mean_dur(dIp, 0.25)*durmultiplier
   durIs <- mean_dur(dIs, 0.25)*durmultiplier
   durIa <- mean_dur(dIa, 0.25)*durmultiplier
-  
+
   mixing <- Reduce(`+`, mapply(function(c, m) c*m, mixmatrix, mweights, SIMPLIFY = FALSE))
   ngm = uval * u_multiplier * t(t(mixing) * (
     yval * (fIp * durIp + fIs * durIs) +(1 - yval) * fIa * durIa))
@@ -151,7 +283,7 @@ ref.dt <- ensemble.dt[, {
           uval = u,
           yval = y, durmultiplier = 0.5
         ))
-        
+
         .(immune_escape = immune_escape, multiplier = multi, multiplierNo = multiNoV, multiShort = multiShort)
       }, by = .(sero, province)
     ]
