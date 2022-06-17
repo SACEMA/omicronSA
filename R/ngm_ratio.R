@@ -21,7 +21,11 @@ approx_eff <- function(titre_ratio) with(
 	approx(NeutTitreRelConvPlasma, Efficacy, titre_ratio)$y/100
 )
 
-adj_eff <- function(init_eff, titre_ratio) approx_eff(approx_titre(init_eff)*titre_ratio)
+adj_eff <- function(init_eff, titre_ratio) {
+	res <- approx_eff(approx_titre(init_eff)*titre_ratio)
+	res[init_eff == 0] <- 0
+	res
+}
 
 ncemparams <- within(read_json(
 	.args[1], simplifyVector = TRUE
@@ -35,31 +39,40 @@ ncemparams <- within(read_json(
 	)
 	
 	names(pts) <- provorder
+	names(eff) <- efforder
 	
 	dur_asympmild <- 1/r1
 	dur_presymptomatic <- 1/gamma2
 	dur_treated <- 1/taus
 	dur_untreated <- 1/r8
+	
 	# element 1 varies by age, since zeta[[1]] is age specific
 	# element 2 varies by province, since pts is province specific
 	weight_symp <- list(
 		AM = dur_asympmild*zeta[[1]],
 		S = dur_presymptomatic*zeta[[2]] + pts*dur_treated + (1-pts)*dur_untreated
 	)
-	
-	
-	# pa <- cbind(
-	# 	primary = (1-((1-pa)*pss)),
-	# 	reinfection = (1-((1-pa)*psr))
-	# )
+
 })
 
-#' for extracting province specific parameters
-get_pars <- function(province) {
-	within(ncemparams,{
-		weight_symp[[2]] <- rep(weight_symp[[2]][province], length(weight_symp[[1]]))
-	})
+ncemparams$frac_pop <- {
+	dt <- readRDS(.args[3])
+	mlt.dt <- melt(
+		dt[date == "2021-11-15"][agegrp %in% 1:7][order(agegrp), .SD, .SDcols = -c("date")],
+		id.vars = c("province", "agegrp")
+	)
+	setNames(lapply(
+		mlt.dt[, unique(province)],
+		function(pv) as.matrix(dcast(mlt.dt[province == pv], agegrp ~ variable))[, -1]
+	), mlt.dt[, unique(province)])
 }
+
+#' for extracting province specific parameters
+get_pars <- function(province) within(ncemparams, {
+	# pick out province specific parameters
+	weight_symp[[2]] <- rep(weight_symp[[2]][province], length(weight_symp[[1]]))
+	frac_pop <- frac_pop[[province]]
+})
 
 re-arrange model as
 dEAMa = ...from S... + ...from R... + ...from V... - to IAMa
@@ -68,11 +81,6 @@ dESa = ibid - to ISa
 foi = IAMa + ISa combination
 downgraded by protection factor (for R, for V)
 then split by proportion asymp / mild vs severe
-
-
-
-asymptomatic, presymptomatic, treatment, notreatment
-zeta2_2*x[varind[13,,]]+zeta1*x[varind[14,,]]+x[varind[15,,]]+x[varind[16,,]]
 
 protection: (1*frac_non_vax + (1-eff)*frac_vax)
 #' compute the relative next generation matrix (i.e., w/o transmissibility scaling factor)
@@ -112,13 +120,7 @@ ngm <- function(
 		)
 	)
 	
-	effR <- adj_eff(effR, immratio)
-	effVJ <- adj_eff(effVJ, immratio)
-	effVJR <- adj_eff(effVJR, immratio)
-	effP1 <- adj_eff(effP1, immratio)
-	effP2 <- adj_eff(effP2, immratio)
-	effP1R <- adj_eff(effP1R, immratio)
-	effP2R <- adj_eff(effP2R, immratio)
+	eff <- adj_eff(eff, immratio)
 	
   for (
   	ageto in dimnames(K)[1]
@@ -130,23 +132,14 @@ ngm <- function(
   	inffrom in dimnames(K)[4]
   ) {
   	K[ageto, infto, agefrom, inffrom] <- 
-  		weight_symp[[inffrom]][agefrom]*contact[agefrom, ageto]*(
-  			fracS[ageto]*paS[ageto] + fracR[ageto]*(1-effR)*paR[ageto] +
-  			fracVJ[ageto]*(1-effVJ)*paVJ
-  		)
+  		weight_symp[[inffrom]][agefrom]*
+  		contact[agefrom, ageto]*
+  		sum(fracPop[ageto,]*(1-eff)*p[infto,ageto])
   }
 	
-  
-   # don't have to do anything with duration of E - no death, so survives from E
-   # w/ p = 1
-    (
-      pa[agefrom, ordfrom]*(dur_asympmild)*zeta[[1]][fromage] +
-      (1-pa[agefrom, ordfrom])*[
-        (dur_presymptomatic)*zeta[[2]] +
-        (ptreat*(duration awaiting treatment) +
-        (1-ptreat)*(duration untreated))
-      ]
-    ) * contact[agefrom, ageto] * popfrac[ageto, ordto] * protec[ordto]
+	K <- array(K, dim = rep(length(agecats)*length(infcats), 2))
+	
+	eigen(K)
 })
 
 
