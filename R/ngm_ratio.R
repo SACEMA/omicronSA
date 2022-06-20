@@ -6,6 +6,7 @@ stopifnot(all(sapply(.pkgs, require, character.only = TRUE, quietly = TRUE)))
   file.path("refdata", "NCEM.json"),
   file.path("refdata", "Khoury_et_al_Nat_Med_fig_1a.csv"),
   file.path("analysis", "input", "susceptibility.rds"), # TODO move to refdata
+  file.path("refdata", "contact_matrices.rds"),
   file.path("analysis", "output", "ngm_ratios.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
@@ -53,6 +54,21 @@ ncemparams <- within(read_json(
 		S = dur_presymptomatic*zeta[[2]] + pts*dur_treated + (1-pts)*dur_untreated
 	)
 
+	p <- array(pa,
+		dim=c(length(pss), length(eff), length(weight_symp)),
+		dimnames = list(age = 1:length(pss), fromstate = names(eff), toinf = names(weight_symp))
+	)
+	
+	p[,"S","S"] <- (1-pa)*pss
+	p[,"R","S"] <- (1-pa)*psr
+	p[,"jj","S"] <- p[,"S","S"]*(1-peffjj)
+	p[,"p1","S"] <- p[,"S","S"]*(1-peffp1)
+	p[,"p2","S"] <- p[,"S","S"]*(1-peffp2)
+	p[,"jjR","S"] <- p[,"R","S"]*(1-peffjj)
+	p[,"p1R","S"] <- p[,"R","S"]*(1-peffp1)
+	p[,"p2R","S"] <- p[,"R","S"]*(1-peffp2)
+	p[,,"AM"] <- 1 - p[,,"S"]
+	
 })
 
 ncemparams$frac_pop <- {
@@ -61,10 +77,37 @@ ncemparams$frac_pop <- {
 		dt[date == "2021-11-15"][agegrp %in% 1:7][order(agegrp), .SD, .SDcols = -c("date")],
 		id.vars = c("province", "agegrp")
 	)
+	mlt.dt[, compartment := fcase(
+		variable == "Rescapable", "R",
+		variable == "Vescapable", "jj",
+		default = "other"
+	)]
+	mlt.dt$variable <- NULL
+	exp.dt <- dcast(mlt.dt[compartment != "other"][, {
+		.(
+			compartment = factor(
+				c(compartment, "jjR", "p1", "p2", "p1R", "p2R"),
+				levels = ncemparams$efforder,
+				ordered = TRUE
+			),
+			value = c(value[1], value[2]/6, rep(value[2]/6, 5)) 
+		)
+	}, by=.(province, agegrp)][order(compartment)], province + agegrp ~ compartment)
+	exp.dt[, S := 1 - rowSums(.SD), .SDcols = -c("province", "agegrp")]
+	
 	setNames(lapply(
-		mlt.dt[, unique(province)],
-		function(pv) as.matrix(dcast(mlt.dt[province == pv], agegrp ~ variable))[, -1]
+		exp.dt[, unique(province)],
+		function(pv) {
+			x <- as.matrix(exp.dt[province == pv, -c(1,2), with = FALSE])
+			dimnames(x) <- list(age=1:7, compartment=colnames(x))
+			x
+		}
 	), mlt.dt[, unique(province)])
+}
+
+ncemparams$contact <- {
+	cm <- readRDS(.args[4])
+	lapply(cm, function(cms) Reduce(`+`, cms))
 }
 
 #' for extracting province specific parameters
@@ -72,17 +115,9 @@ get_pars <- function(province) within(ncemparams, {
 	# pick out province specific parameters
 	weight_symp[[2]] <- rep(weight_symp[[2]][province], length(weight_symp[[1]]))
 	frac_pop <- frac_pop[[province]]
+	contact <- contact[[province]]
 })
 
-re-arrange model as
-dEAMa = ...from S... + ...from R... + ...from V... - to IAMa
-dESa = ibid - to ISa
-
-foi = IAMa + ISa combination
-downgraded by protection factor (for R, for V)
-then split by proportion asymp / mild vs severe
-
-protection: (1*frac_non_vax + (1-eff)*frac_vax)
 #' compute the relative next generation matrix (i.e., w/o transmissibility scaling factor)
 #' 
 #' @param params a list of the NCEM parameters, from `get_pars` (i.e. for a particular province):
@@ -106,11 +141,11 @@ protection: (1*frac_non_vax + (1-eff)*frac_vax)
 ngm <- function(
 	params, immratio = 1
 ) with(params, {
-	agecats <- 1:7
-	infcats <- c("AM", "S")
+	agecats <- as.integer(dimnames(frac_pop)$age)
+	infcats <- names(weight_symp)
 	# for convenience while iteratively constructing, make this a tensor
 	# but can later reshape it with array(K, dim = rep(length(agecats)*length(infcats), 2))
-	K <- array(0,
+	K <- array(NA,
 		dim = rep(c(length(agecats), length(infcats)), times = 2),
 		dimnames = list(
 			toage = agecats, # to ages
@@ -123,110 +158,24 @@ ngm <- function(
 	eff <- adj_eff(eff, immratio)
 	
   for (
-  	ageto in dimnames(K)[1]
+  	ageto in as.integer(dimnames(K)$toage)
   ) for (
-  	infto in dimnames(K)[2]
+  	infto in dimnames(K)$toinf
   ) for (
-  	agefrom in dimnames(K)[3]
+  	agefrom in as.integer(dimnames(K)$fromage)
   ) for (
-  	inffrom in dimnames(K)[4]
-  ) {
-  	K[ageto, infto, agefrom, inffrom] <- 
+  	inffrom in dimnames(K)$frominf
+  ) K[ageto, infto, agefrom, inffrom] <- 
   		weight_symp[[inffrom]][agefrom]*
   		contact[agefrom, ageto]*
-  		sum(fracPop[ageto,]*(1-eff)*p[infto,ageto])
-  }
+  		sum(frac_pop[ageto,]*(1-eff)*p[ageto,,infto])
 	
 	K <- array(K, dim = rep(length(agecats)*length(infcats), 2))
-	
-	eigen(K)
+	Re(eigen(K)$values[1])
 })
 
-
-
-cms <- readRDS(.args[1])
-
-set.seed(8675309)
-yusamp <- qread(.args[2])[sample(.N, 1000, replace = FALSE)]
-
-ensemble.dt <- yusamp[, .SD, .SDcols = grep("(u|y)_", names(yusamp))][,
-                        epi_sample := 1:.N
-]
-
-AR.dt <- readRDS(.args[3])
-timing <- readRDS(.args[4])
-mob.dt <- readRDS(.args[5])
-
-contact_schedule <- mob.dt[
-  timing, on = .(region = province)][
-  between(date, start, start + 6)][,
-  .(
-    home = 1, work = prod(work)^ (1 / .N),
-    other = prod(other)^ (1 / .N),
-    # school is often 0, so weight slightly differently
-    school = prod(school) ^ (1 / .N)
-  ), by = .(region = abbr)
-]
-
-delay_gamma <- function(mu, shape, t_max, t_step) {
-  scale = mu / shape;
-  t_points = seq(0, t_max, by = t_step);
-  heights = pgamma(t_points + t_step/2, shape, scale = scale) -
-    pgamma(pmax(0, t_points - t_step/2), shape, scale = scale);
-  return (data.table(t = t_points, p = heights / sum(heights)))
-}
-
-mean_dur <- function(dX, time_step) {
-  ts <- seq(0, by=time_step, length.out = length(dX))
-  sum(dX * ts)
-}
-
-#' @param dIp, a vector of times + probabilities for the duration of this event
-#' @param dIs, same
-#' @param dIa, same
-#' @param mixmatrix, the mixing matrices
-#' @param mwweights, their relative weights
-#' @param fIs, the relative contribution of Is
-#' @param fIp, same
-#' @param fIa, same
-#' @param uval, vector of susceptibility modifiers, by age
-#' @param yval, vector of asymptomatic fractions, by age
-#' @param u_multiplier, the multiplier to modify effective susceptibility
-#' @param durmultiplier, the relative multiplier to reduce durations of infectiousness
-#'
-#' @return the eigenvalue of the ODE transmission / transition matrix
-ngmR <- function(
-  dIp = delay_gamma(1.5, 4.0, t_max = 15, t_step = 0.25)$p,
-  dIs = delay_gamma(3.5, 4.0, t_max = 15, t_step = 0.25)$p,
-  dIa = delay_gamma(5.0, 4.0, t_max = 15, t_step = 0.25)$p,
-  mixmatrix, mweights,
-  fIs = 1, fIp = 1, fIa = 0.5,
-  uval, yval,
-  u_multiplier = 1, durmultiplier = 1
-) {
-  durIp <- mean_dur(dIp, 0.25)*durmultiplier
-  durIs <- mean_dur(dIs, 0.25)*durmultiplier
-  durIa <- mean_dur(dIa, 0.25)*durmultiplier
-
-  mixing <- Reduce(`+`, mapply(function(c, m) c*m, mixmatrix, mweights, SIMPLIFY = FALSE))
-  ngm = uval * u_multiplier * t(t(mixing) * (
-    yval * (fIp * durIp + fIs * durIs) +(1 - yval) * fIa * durIa))
-  Re(eigen(ngm)$values[1])
-}
-
-us <- function(sdt.row) {
-  rep(
-    sdt.row[, as.numeric(.SD), .SDcols = grep("^u_",names(sdt.row))],
-    each = 2
-  )
-}
-
-ys <- function(sdt.row) {
-  rep(
-    sdt.row[, as.numeric(.SD), .SDcols = grep("^y_",names(sdt.row))],
-    each = 2
-  )
-}
+ps <- get_pars("WC")
+ngm(ps)
 
 immune_escape <- seq(0, 1, by = 0.05)
 
