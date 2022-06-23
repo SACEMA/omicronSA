@@ -28,6 +28,8 @@ adj_eff <- function(init_eff, titre_ratio) {
 	res
 }
 
+# NCEM v6, scenario 15, behavior scenario 1
+
 ncemparams <- within(read_json(
 	.args[1], simplifyVector = TRUE
 ), {
@@ -59,20 +61,31 @@ ncemparams <- within(read_json(
 		dimnames = list(age = 1:length(pss), fromstate = names(eff), toinf = names(weight_symp))
 	)
 	
+	# proportion severe, coming from Susceptible & Recovered
 	p[,"S","S"] <- (1-pa)*pss
 	p[,"R","S"] <- (1-pa)*psr
+	
+	# proportion severe, from breakthrough of vaccination
+	# use the baseline proportion severe, reduced by
+	# efficacy of preventing severe disease
 	p[,"jj","S"] <- p[,"S","S"]*(1-peffjj)
 	p[,"p1","S"] <- p[,"S","S"]*(1-peffp1)
 	p[,"p2","S"] <- p[,"S","S"]*(1-peffp2)
+	
+	# same, but for breakthroughs of recovered vaccinees
 	p[,"jjR","S"] <- p[,"R","S"]*(1-peffjj)
 	p[,"p1R","S"] <- p[,"R","S"]*(1-peffp1)
 	p[,"p2R","S"] <- p[,"R","S"]*(1-peffp2)
+	
+	# the complement for proportion to asymptomatic / mild
 	p[,,"AM"] <- 1 - p[,,"S"]
 	
 })
 
+# read in the synthetic immunity results
 ncemparams$frac_pop <- {
 	dt <- readRDS(.args[3])
+	# TODO temporary stretch of old output
 	mlt.dt <- melt(
 		dt[date == "2021-11-15"][agegrp %in% 1:7][order(agegrp), .SD, .SDcols = -c("date")],
 		id.vars = c("province", "agegrp")
@@ -105,6 +118,7 @@ ncemparams$frac_pop <- {
 	), mlt.dt[, unique(province)])
 }
 
+# TODO update to 1:7 contacts
 ncemparams$contact <- {
 	cm <- readRDS(.args[4])
 	lapply(cm, function(cms) Reduce(`+`, cms))
@@ -125,6 +139,8 @@ get_pars <- function(province) within(ncemparams, {
 #'  - `contacts`, a matrix of relative contact rates, `C[toage, fromage]`
 #'  - asdfafs
 #' @param immratio numeric, the fold ratio for immune protection (input into `adj_ratio(...)`)
+#'  this will adjust the efficacy against infection of all sources of protection (R, various Vs)
+#'  but not efficacy against disease
 #' 
 #' @details Uses the states-at-infection approach to K_MN next generation matrix.
 #' The states-at-infection are
@@ -135,8 +151,9 @@ get_pars <- function(province) within(ncemparams, {
 #'  presymptomatic individuals, that go onto severe disease infectious states, either treatment seeking
 #'  or not
 #'  
-#' ... with additional stratification by age. The \eqn{I_{X}} states result in different
-#' 
+#' ... with additional stratification by age. The \eqn{I_{X}} states contribute an onward FOI by age-to-age,
+#' which when applied to the available fractions of various kinds (R, S, various Vaccinated types) leads
+#' to a mixture of new \eqn{E_{AM}} or \eqn{E_{S}}
 #' 
 ngm <- function(
 	params, immratio = 1
@@ -167,7 +184,7 @@ ngm <- function(
   	inffrom in dimnames(K)$frominf
   ) K[ageto, infto, agefrom, inffrom] <- 
   		weight_symp[[inffrom]][agefrom]*
-  		contact[agefrom, ageto]*
+  		contact[ageto, agefrom]*
   		sum(frac_pop[ageto,]*(1-eff)*p[ageto,,infto])
 	
 	K <- array(K, dim = rep(length(agecats)*length(infcats), 2))
@@ -176,6 +193,9 @@ ngm <- function(
 
 ps <- get_pars("WC")
 ngm(ps)
+ngm(ps, 1/3)
+
+ngm(ps, 1/3)/ngm(ps)
 
 immune_escape <- seq(0, 1, by = 0.05)
 

@@ -91,6 +91,16 @@ inputdefaults: ${INDIR}/incidence.rds \
 
 
 # other inputs
+
+PREMURL := 'https://journals.plos.org/ploscompbiol/article/file?type=supplementary&id=10.1371/journal.pcbi.1005697.s002'
+PREMFILE := contact_matrices_152_countries/MUestimates_all_locations_2.xlsx
+
+${INDIR}/${PREMFILE}:
+	cd ${INDIR}; wget -c -O tmp.zip ${PREMURL}; unzip tmp.zip ${PREMFILE}; rm tmp.zip
+
+${INDIR}/contacts.rds: R/ngm/contact_extract.R ${INDIR}/${PREMFILE}
+	$(call R)
+
 ${INDIR}/susceptibility.rds: R/susceptibility.R $(patsubst %,${DATADIR}/%.RDS,${NCEMOUT})
 	$(call R)
 
@@ -108,7 +118,7 @@ ${INDIR}/tmb_ext.rda: R/fitting/tmb_funs_ext.R | ${INDIR}
 ${INDIR}/%/incidence_ensemble.rds: R/ensemble.R ${INDIR}/incidence.rds ${OUTDIR}/sgtf/%/sims.rds
 	$(call R)
 
-inputdefaults: ${INDIR}/susceptibility.rds ${INDIR}/timing.rds ${INDIR}/tmb.rda ${INDIR}/tmb_ext.rda
+inputdefaults: $(addprefix ${INDIR}/,susceptibility.rds timing.rds tmb.rda susceptibility.rds contacts.rds)
 
 inputclean:
 	rm -f ${DATADIR}/pos_test_ll_*.RDS
@@ -123,3 +133,4 @@ inputclean:
 	rm -f ${INDIR}/susceptibility.rds
 	rm -f ${INDIR}/incidence_*.rds
 	rm -f ${INDIR}/incidence.rds
+	rm -f ${INDIR}/contacts.rds
